@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小说地图工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+        /* 顶部导航栏 */
+        .header {
+            height: 60px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        /* 主体容器：左侧功能区 + 右侧地图区 */
+        .main-container {
+            display: flex;
+            flex: 1;
+            padding: 20px;
+            gap: 20px;
+            overflow: hidden;
+        }
+        /* 左侧功能区 */
+        .func-panel {
+            width: 320px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow-y: auto;
+            max-height: calc(100vh - 100px);
+            flex-shrink: 0;
+        }
+        .func-group {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .func-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-left: 3px solid #e74c3c;
+            padding-left: 10px;
+        }
+        .btn {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background: #3498db;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .btn-secondary {
+            background: #95a5a6;
+        }
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+        .btn-success {
+            background: #2ecc71;
+        }
+        .btn-success:hover {
+            background: #27ae60;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            resize: none;
+        }
+        textarea {
+            height: 80px;
+            max-length: 200;
+        }
+        .param-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .list-item {
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .list-btn {
+            padding: 3px 8px;
+            font-size: 12px;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            background: #3498db;
+            color: white;
+        }
+        .list-btn:hover {
+            background: #2980b9;
+        }
+        .list-btn.btn-danger {
+            background: #e74c3c;
+        }
+        .list-btn.btn-danger:hover {
+            background: #c0392b;
+        }
+        /* 右侧地图区 */
+        .map-container {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: relative;
+            overflow: hidden;
+            min-width: 600px;
+        }
+        #mapCanvas {
+            background: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            cursor: grab;
+            width: 100%;
+            height: 100%;
+        }
+        #mapCanvas:active {
+            cursor: grabbing;
+        }
+        /* 备注框 */
+        .note-box {
+            position: absolute;
+            width: 250px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 100;
+        }
+        .note-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .note-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .note-close {
+            cursor: pointer;
+            color: #999;
+            font-size: 16px;
+        }
+        .note-close:hover {
+            color: #e74c3c;
+        }
+        .note-content-view {
+            font-size: 13px;
+            margin-bottom: 10px;
+            max-height: 100px;
+            overflow-y: auto;
+            color: #333;
+        }
+        .note-content-edit {
+            display: none;
+        }
+        .note-content-edit textarea {
+            width: 100%;
+            height: 80px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .note-actions {
+            display: flex;
+            gap: 5px;
+        }
+        /* 单位说明 */
+        .unit-desc {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            color: #333;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+            z-index: 90;
+        }
+        /* 批量导入地图列表 */
+        .map-list {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            width: 200px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+            z-index: 90;
+        }
+        .map-list-title {
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            background: #3498db;
+            color: white;
+        }
+        .map-list-item {
+            padding: 8px 10px;
+            font-size: 13px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .map-list-item:hover {
+            background: #f9f9f9;
+        }
+        .map-list-item.active {
+            background: #3498db;
+            color: white;
+        }
+        /* 已保存地图列表 */
+        .saved-maps-list {
+            margin-top: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .saved-map-item {
+            padding: 5px 10px;
+            font-size: 12px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .saved-map-btn {
+            font-size: 11px;
+            padding: 2px 6px;
+        }
+        /* 滚动条样式优化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+    <!-- 引入FileSaver.js用于JSON下载 -->
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+</head>
+<body>
+    <div class="header">小说地图工具</div>
+    <div class="main-container">
+        <!-- 左侧功能区 -->
+        <div class="func-panel">
+            <!-- 文件操作 -->
+            <div class="func-group">
+                <div class="func-title">文件操作</div>
+                <button class="btn" id="saveBtn">保存当前地图（JSON）</button>
+                <button class="btn btn-success" id="saveElementsBtn">保存元素到地图文件</button>
+                <button class="btn btn-secondary" id="exportAllBtn">导出所有地图元素</button>
+                <input type="file" id="loadFile" accept=".json" style="display: none;">
+                <button class="btn" id="loadBtn">读取地图（JSON）</button>
+                <button class="btn btn-danger" id="clearBtn">清空所有数据</button>
+                <!-- 批量导入（可选） -->
+                <input type="file" id="batchLoadFile" accept=".json" multiple style="display: none;">
+                <button class="btn" id="batchLoadBtn">批量导入地图（可选）</button>
+                
+                <!-- 已保存地图列表 -->
+                <div class="form-group" style="margin-top: 15px;">
+                    <label>已保存地图</label>
+                    <div class="saved-maps-list" id="savedMapsList">
+                        暂无保存的地图
+                    </div>
+                </div>
+            </div>
+
+            <!-- 坐标点添加（通过输入坐标） -->
+            <div class="func-group">
+                <div class="func-title">添加坐标点</div>
+                <div class="form-group">
+                    <label>坐标点名称</label>
+                    <input type="text" id="manualNoteName" placeholder="输入坐标点名称" value="新坐标点">
+                </div>
+                <div class="form-group">
+                    <label>坐标位置（x,y）</label>
+                    <div class="param-grid">
+                        <input type="text" id="manualNoteX" placeholder="0~2000" value="1000">
+                        <input type="text" id="manualNoteY" placeholder="0~2000" value="1000">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>备注说明</label>
+                    <textarea id="manualNoteContent" placeholder="输入备注（≤200字）"></textarea>
+                </div>
+                <button class="btn" id="addManualNoteBtn">添加坐标点</button>
+            </div>
+
+            <!-- 备注功能 -->
+            <div class="func-group">
+                <div class="func-title">坐标点管理</div>
+                <div id="noteList">暂无坐标点，点击地图或上方添加</div>
+            </div>
+
+            <!-- 范围标识 -->
+            <div class="func-group">
+                <div class="func-title">范围标识</div>
+                <div class="form-group">
+                    <label>标识名称</label>
+                    <input type="text" id="markerName" placeholder="输入标识名称" value="新区域">
+                </div>
+                <div class="form-group">
+                    <label>标识类型</label>
+                    <select id="markerType">
+                        <option value="rect">矩形（4个顶点坐标）</option>
+                        <option value="circle">圆形（圆心+半径）</option>
+                    </select>
+                </div>
+                <!-- 矩形参数 -->
+                <div id="rectParams" class="param-group">
+                    <div class="form-group">
+                        <label>顶点1（x1,y1）</label>
+                        <div class="param-grid">
+                            <input type="text" id="rectX1" placeholder="0~2000" value="400">
+                            <input type="text" id="rectY1" placeholder="0~2000" value="400">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>顶点2（x2,y2）</label>
+                        <div class="param-grid">
+                            <input type="text" id="rectX2" placeholder="0~2000" value="800">
+                            <input type="text" id="rectY2" placeholder="0~2000" value="400">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>顶点3（x3,y3）</label>
+                        <div class="param-grid">
+                            <input type="text" id="rectX3" placeholder="0~2000" value="800">
+                            <input type="text" id="rectY3" placeholder="0~2000" value="800">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>顶点4（x4,y4）</label>
+                        <div class="param-grid">
+                            <input type="text" id="rectX4" placeholder="0~2000" value="400">
+                            <input type="text" id="rectY4" placeholder="0~2000" value="800">
+                        </div>
+                    </div>
+                </div>
+                <!-- 圆形参数 -->
+                <div id="circleParams" class="param-group" style="display: none;">
+                    <div class="form-group">
+                        <label>圆心（cx,cy）</label>
+                        <div class="param-grid">
+                            <input type="text" id="circleCx" placeholder="0~2000" value="1200">
+                            <input type="text" id="circleCy" placeholder="0~2000" value="1200">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>半径（r）</label>
+                        <input type="text" id="circleR" placeholder="0~1000" value="300">
+                    </div>
+                </div>
+                <button class="btn" id="addMarkerBtn">添加标识</button>
+                <div id="markerList">暂无标识</div>
+            </div>
+
+            <!-- 量化单位 -->
+            <div class="func-group">
+                <div class="func-title">量化单位</div>
+                <div class="form-group">
+                    <label>单位名称</label>
+                    <input type="text" id="unitName" placeholder="例如：灵里" value="里">
+                </div>
+                <div class="form-group">
+                    <label>单位说明</label>
+                    <input type="text" id="unitDesc" placeholder="例如：1灵里=1000里" value="1里=500米">
+                </div>
+                <button class="btn" id="saveUnitBtn">保存单位设置</button>
+            </div>
+
+            <!-- 地图关联 -->
+            <div class="func-group">
+                <div class="func-title">地图关联</div>
+                <div class="form-group">
+                    <label>当前地图名称</label>
+                    <input type="text" id="currentMapName" placeholder="输入当前地图名称" value="主世界地图">
+                </div>
+                <div class="form-group">
+                    <label>目标地图名称</label>
+                    <input type="text" id="targetMapName" placeholder="输入关联地图名称" value="火焰秘境">
+                </div>
+                <div class="form-group">
+                    <label>当前地图关联坐标（x,y）</label>
+                    <input type="text" id="currentMapXY" placeholder="0~2000" value="200,1800">
+                </div>
+                <div class="form-group">
+                    <label>目标地图关联坐标（x,y）</label>
+                    <input type="text" id="targetMapXY" placeholder="0~2000" value="1000,1000">
+                </div>
+                <button class="btn" id="addRelationBtn">添加双向关联</button>
+                <div id="relationList">暂无关联</div>
+            </div>
+        </div>
+
+        <!-- 右侧地图区 -->
+        <div class="map-container">
+            <canvas id="mapCanvas"></canvas>
+            <!-- 备注框 -->
+            <div class="note-box" id="noteBox">
+                <div class="note-header">
+                    <div class="note-name" id="noteNameDisplay"></div>
+                    <span class="note-close" id="noteCloseBtn">×</span>
+                </div>
+                <div class="note-content-view" id="noteContentDisplay"></div>
+                <div class="note-content-edit" id="noteContentEdit">
+                    <textarea id="noteContentTextarea" maxlength="200"></textarea>
+                </div>
+                <div class="note-actions">
+                    <button class="list-btn" id="editNoteBtn">编辑</button>
+                    <button class="list-btn" id="saveNoteBtn" style="display: none;">保存</button>
+                    <button class="list-btn btn-danger" id="cancelNoteBtn" style="display: none;">取消</button>
+                    <button class="list-btn btn-danger" id="deleteNoteBtn">删除</button>
+                </div>
+            </div>
+            <!-- 单位说明 -->
+            <div class="unit-desc" id="unitDescDisplay">1里=500米</div>
+            <!-- 地图列表（批量导入） -->
+            <div class="map-list" id="mapList" style="display: none;">
+                <div class="map-list-title">已导入地图</div>
+                <div id="mapListContent"></div>
+            </div>
+        </div>
+    </div>
+        <script>
+        // ==================== 全局状态管理 ====================
+        const state = {
+            scale: 1, // 缩放比例（0.1~2）
+            offsetX: 0, // 地图X轴偏移量
+            offsetY: 0, // 地图Y轴偏移量
+            mapSize: 2000, // 地图原始尺寸（2000×2000）
+            notes: [], // 坐标点列表：[{id, name, x, y, content}]
+            rangeMarkers: [], // 范围标识列表：[{id, name, type, params}]
+            mapRelations: [], // 地图关联列表：[{id, currentMapName, currentXY, targetMapName, targetXY}]
+            unit: { name: '里', desc: '1里=500米' }, // 量化单位
+            currentNoteId: null, // 当前激活的坐标点ID
+            currentMapIndex: -1, // 当前选中的地图索引
+            currentMap: null, // 当前显示的地图（批量导入时）
+            mapList: [], // 导入的地图列表（批量导入时）
+            savedMaps: {}, // 保存的地图数据（键：地图名称，值：完整地图数据）
+            // 拖拽状态
+            isDragging: false,
+            dragStartX: 0,
+            dragStartY: 0,
+            lastOffsetX: 0,
+            lastOffsetY: 0,
+            dragMoved: false, // 是否发生了拖拽移动
+            // 备注编辑状态
+            isEditingNote: false,
+            originalNoteContent: ''
+        };
+
+        // ==================== DOM元素获取 ====================
+        const canvas = document.getElementById('mapCanvas');
+        const ctx = canvas.getContext('2d');
+        const noteBox = document.getElementById('noteBox');
+        const noteNameDisplay = document.getElementById('noteNameDisplay');
+        const noteContentDisplay = document.getElementById('noteContentDisplay');
+        const noteContentEdit = document.getElementById('noteContentEdit');
+        const noteContentTextarea = document.getElementById('noteContentTextarea');
+        const noteCloseBtn = document.getElementById('noteCloseBtn');
+        const editNoteBtn = document.getElementById('editNoteBtn');
+        const saveNoteBtn = document.getElementById('saveNoteBtn');
+        const cancelNoteBtn = document.getElementById('cancelNoteBtn');
+        const deleteNoteBtn = document.getElementById('deleteNoteBtn');
+        const unitDescDisplay = document.getElementById('unitDescDisplay');
+        const mapList = document.getElementById('mapList');
+        const mapListContent = document.getElementById('mapListContent');
+        const savedMapsList = document.getElementById('savedMapsList');
+        // 手动添加坐标点元素
+        const manualNoteName = document.getElementById('manualNoteName');
+        const manualNoteX = document.getElementById('manualNoteX');
+        const manualNoteY = document.getElementById('manualNoteY');
+        const manualNoteContent = document.getElementById('manualNoteContent');
+        const addManualNoteBtn = document.getElementById('addManualNoteBtn');
+        // 范围标识名称
+        const markerName = document.getElementById('markerName');
+        // 保存按钮
+        const saveElementsBtn = document.getElementById('saveElementsBtn');
+        const exportAllBtn = document.getElementById('exportAllBtn');
+
+        // ==================== 初始化 ====================
+        function init() {
+            // 设置Canvas尺寸适配容器
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // 初始化Canvas
+            renderMap();
+            // 绑定事件监听
+            bindEvents();
+            // 更新列表显示（坐标点、标识、关联）
+            updateAllLists();
+            // 更新已保存地图列表
+            updateSavedMapsList();
+        }
+
+        // 适配Canvas尺寸
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            renderMap();
+        }
+
+        // ==================== 事件绑定 ====================
+        function bindEvents() {
+            // 1. 缩放事件（鼠标滚轮）
+            canvas.addEventListener('wheel', handleWheel);
+            // 2. 拖拽事件（鼠标）
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', handleMouseUp);
+            // 3. 地图点击事件（添加坐标点）
+            canvas.addEventListener('click', handleCanvasClick);
+            // 4. 空白处点击关闭备注框
+            document.addEventListener('click', handleDocumentClick);
+            // 5. 功能按钮事件
+            document.getElementById('saveBtn').addEventListener('click', saveCurrentMap);
+            saveElementsBtn.addEventListener('click', saveElementsToFile);
+            exportAllBtn.addEventListener('click', exportAllMaps);
+            document.getElementById('loadBtn').addEventListener('click', () => document.getElementById('loadFile').click());
+            document.getElementById('loadFile').addEventListener('change', loadMap);
+            document.getElementById('clearBtn').addEventListener('click', clearAllData);
+            document.getElementById('batchLoadBtn').addEventListener('click', () => document.getElementById('batchLoadFile').click());
+            document.getElementById('batchLoadFile').addEventListener('change', batchLoadMaps);
+            // 手动添加坐标点
+            addManualNoteBtn.addEventListener('click', addManualNote);
+            // 范围标识
+            document.getElementById('markerType').addEventListener('change', toggleMarkerParams);
+            document.getElementById('addMarkerBtn').addEventListener('click', addRangeMarker);
+            // 量化单位
+            document.getElementById('saveUnitBtn').addEventListener('click', saveUnitSetting);
+            // 地图关联
+            document.getElementById('addRelationBtn').addEventListener('click', addMapRelation);
+            // 坐标点操作
+            noteCloseBtn.addEventListener('click', () => {
+                noteBox.style.display = 'none';
+                state.currentNoteId = null;
+                state.isEditingNote = false;
+                toggleNoteEditMode(false);
+            });
+            editNoteBtn.addEventListener('click', () => startEditNote());
+            saveNoteBtn.addEventListener('click', () => saveEditNote());
+            cancelNoteBtn.addEventListener('click', () => cancelEditNote());
+            deleteNoteBtn.addEventListener('click', () => deleteNote(state.currentNoteId));
+        }
+
+        // ==================== 核心功能实现 ====================
+        /**
+         * 1. 地图渲染（核心函数）：根据当前状态绘制所有元素
+         */
+        function renderMap() {
+            if (!canvas.getContext) return;
+            
+            // 清空Canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 保存当前绘图状态
+            ctx.save();
+            // 应用缩放和偏移（核心：所有元素基于此变换）
+            ctx.translate(canvas.width / 2, canvas.height / 2); // 中心点平移
+            ctx.scale(state.scale, state.scale);
+            ctx.translate(-canvas.width / 2 + state.offsetX, -canvas.height / 2 + state.offsetY); // 调整偏移
+
+            // 绘制坐标轴背景
+            ctx.fillStyle = '#f9f9f9';
+            ctx.fillRect(-50, -50, state.mapSize + 100, state.mapSize + 100);
+
+            // 绘制网格线
+            ctx.strokeStyle = '#eee';
+            ctx.lineWidth = 0.5 / state.scale;
+            const gridStep = 200; // 网格步长200像素
+            for (let x = 0; x <= state.mapSize; x += gridStep) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, state.mapSize);
+                ctx.stroke();
+            }
+            for (let y = 0; y <= state.mapSize; y += gridStep) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(state.mapSize, y);
+                ctx.stroke();
+            }
+
+            // 绘制坐标轴
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1 / state.scale;
+            // X轴
+            ctx.beginPath();
+            ctx.moveTo(0, -20);
+            ctx.lineTo(state.mapSize, -20);
+            ctx.stroke();
+            // Y轴
+            ctx.beginPath();
+            ctx.moveTo(-20, 0);
+            ctx.lineTo(-20, state.mapSize);
+            ctx.stroke();
+
+            // 绘制坐标刻度和数值（更大的字体）
+            ctx.fillStyle = '#666';
+            ctx.font = `${16 / state.scale}px sans-serif`; // 字体更大
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            for (let x = 0; x <= state.mapSize; x += gridStep) {
+                // X轴刻度
+                ctx.beginPath();
+                ctx.moveTo(x, -20);
+                ctx.lineTo(x, -30);
+                ctx.stroke();
+                // X轴数值
+                ctx.fillText(x.toString(), x, -40);
+            }
+
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (let y = 0; y <= state.mapSize; y += gridStep) {
+                // Y轴刻度
+                ctx.beginPath();
+                ctx.moveTo(-20, y);
+                ctx.lineTo(-30, y);
+                ctx.stroke();
+                // Y轴数值
+                ctx.fillText(y.toString(), -40, y);
+            }
+
+            // 绘制地图边界（2000×2000）
+            ctx.strokeStyle = '#999';
+            ctx.lineWidth = 1 / state.scale;
+            ctx.strokeRect(0, 0, state.mapSize, state.mapSize);
+
+            // 绘制范围标识（红色实线）及名称
+            state.rangeMarkers.forEach(marker => {
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2 / state.scale; // 线条宽度随缩放反向调整（视觉一致）
+                ctx.beginPath();
+                if (marker.type === 'rect') {
+                    const { x1, y1, x2, y2, x3, y3, x4, y4 } = marker.params;
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.lineTo(x3, y3);
+                    ctx.lineTo(x4, y4);
+                    ctx.closePath();
+                    // 绘制标识名称（矩形中心）
+                    const centerX = (x1 + x3) / 2;
+                    const centerY = (y1 + y3) / 2;
+                    drawMarkerName(marker.name, centerX, centerY);
+                } else if (marker.type === 'circle') {
+                    const { cx, cy, r } = marker.params;
+                    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                    // 绘制标识名称（圆形中心）
+                    drawMarkerName(marker.name, cx, cy + r + 20 / state.scale);
+                }
+                ctx.stroke();
+            });
+
+            // 绘制地图关联标识和文字
+            state.mapRelations.forEach(relation => {
+                const [x, y] = relation.currentXY.split(',').map(Number);
+                
+                // 绘制关联标记（双向箭头）
+                ctx.fillStyle = '#3498db';
+                ctx.beginPath();
+                ctx.moveTo(x - 10 / state.scale, y);
+                ctx.lineTo(x + 10 / state.scale, y);
+                ctx.lineTo(x + 5 / state.scale, y - 5 / state.scale);
+                ctx.moveTo(x + 10 / state.scale, y);
+                ctx.lineTo(x + 5 / state.scale, y + 5 / state.scale);
+                ctx.moveTo(x - 10 / state.scale, y);
+                ctx.lineTo(x - 5 / state.scale, y - 5 / state.scale);
+                ctx.moveTo(x - 10 / state.scale, y);
+                ctx.lineTo(x - 5 / state.scale, y + 5 / state.scale);
+                ctx.stroke();
+                
+                // 绘制关联文字
+                const text = `↔ ${relation.targetMapName}`;
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = `${14 / state.scale}px sans-serif`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text, x + 15 / state.scale, y);
+            });
+
+            // 绘制坐标点标记和名称
+            state.notes.forEach(note => {
+                // 绘制坐标点标记（红色圆点）
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.arc(note.x, note.y, 8 / state.scale, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 绘制坐标点名称（去掉方框）
+                ctx.fillStyle = '#e74c3c';
+                ctx.font = `${14 / state.scale}px sans-serif`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(note.name, note.x + 15 / state.scale, note.y);
+            });
+
+            // 恢复绘图状态
+            ctx.restore();
+        }
+
+        /**
+         * 绘制范围标识名称
+         */
+        function drawMarkerName(name, x, y) {
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = `${14 / state.scale}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(name, x, y);
+        }
+
+        /**
+         * 2. 缩放处理（鼠标滚轮）
+         */
+        function handleWheel(e) {
+            e.preventDefault();
+            // 计算新缩放比例（每次调整0.1）
+            const delta = e.deltaY < 0 ? 0.1 : -0.1;
+            let newScale = state.scale + delta;
+            // 限制缩放范围（0.1~2）
+            newScale = Math.max(0.1, Math.min(2, newScale));
+            // 更新缩放比例并重新渲染
+            state.scale = newScale;
+            renderMap();
+        }
+
+        /**
+         * 3. 拖拽处理（鼠标）- 允许滑动到任意地方
+         */
+        function handleMouseDown(e) {
+            state.isDragging = true;
+            state.dragMoved = false; // 重置拖拽移动标记
+            // 记录初始鼠标位置和当前偏移量
+            state.dragStartX = e.clientX;
+            state.dragStartY = e.clientY;
+            state.lastOffsetX = state.offsetX;
+            state.lastOffsetY = state.offsetY;
+        }
+
+        function handleMouseMove(e) {
+            if (!state.isDragging) return;
+            
+            // 标记发生了拖拽移动
+            state.dragMoved = true;
+            
+            // 计算偏移差值
+            const deltaX = e.clientX - state.dragStartX;
+            const deltaY = e.clientY - state.dragStartY;
+            // 更新偏移量（基于当前缩放比例调整拖拽速度）
+            let newOffsetX = state.lastOffsetX + deltaX / state.scale;
+            let newOffsetY = state.lastOffsetY + deltaY / state.scale;
+            
+            // 移除严格的边界限制，允许滑动到任意地方
+            // 只保留基本的合理性限制
+            const maxOffset = canvas.width * 3;
+            const minOffset = -canvas.width * 3;
+            
+            newOffsetX = Math.max(minOffset, Math.min(maxOffset, newOffsetX));
+            newOffsetY = Math.max(minOffset, Math.min(maxOffset, newOffsetY));
+            
+            // 更新偏移量并重新渲染
+            state.offsetX = newOffsetX;
+            state.offsetY = newOffsetY;
+            renderMap();
+        }
+
+        function handleMouseUp() {
+            state.isDragging = false;
+        }
+
+        /**
+         * 4. 地图点击（添加坐标点）- 只有非拖拽才触发
+         */
+        function handleCanvasClick(e) {
+            // 如果发生了拖拽移动，则不触发添加坐标点
+            if (state.dragMoved) return;
+            
+            // 计算点击位置在地图上的原始坐标（反向应用缩放和偏移）
+            const rect = canvas.getBoundingClientRect();
+            const clickX = (e.clientX - rect.left - canvas.width / 2) / state.scale + canvas.width / 2 - state.offsetX;
+            const clickY = (e.clientY - rect.top - canvas.height / 2) / state.scale + canvas.height / 2 - state.offsetY;
+            
+            // 限制坐标在0~2000范围内
+            const x = Math.max(0, Math.min(state.mapSize, Math.round(clickX)));
+            const y = Math.max(0, Math.min(state.mapSize, Math.round(clickY)));
+
+            // 输入坐标点名称
+            const name = prompt('请输入坐标点名称：', '');
+            if (!name || !name.trim()) return;
+            
+            // 输入坐标点备注
+            const content = prompt('请输入备注说明（≤200字）：', '');
+            if (content !== null) {
+                if (content.length > 200) {
+                    alert('备注字数不能超过200字！');
+                    return;
+                }
+                
+                // 添加新坐标点
+                const newNote = {
+                    id: `note_${Date.now()}`,
+                    name: name.trim(),
+                    x,
+                    y,
+                    content: content.trim() || '无备注'
+                };
+                state.notes.push(newNote);
+                // 更新列表和渲染
+                updateNoteList();
+                renderMap();
+            }
+        }
+
+        /**
+         * 5. 手动添加坐标点（通过输入坐标）
+         */
+        function addManualNote() {
+            const name = manualNoteName.value.trim();
+            const x = parseInt(manualNoteX.value);
+            const y = parseInt(manualNoteY.value);
+            const content = manualNoteContent.value.trim() || '无备注';
+            
+            // 验证输入
+            if (!name) {
+                alert('坐标点名称不能为空！');
+                return;
+            }
+            
+            if (isNaN(x) || x < 0 || x > 2000) {
+                alert('X坐标必须是0~2000的整数！');
+                return;
+            }
+            
+            if (isNaN(y) || y < 0 || y > 2000) {
+                alert('Y坐标必须是0~2000的整数！');
+                return;
+            }
+            
+            if (content.length > 200) {
+                alert('备注字数不能超过200字！');
+                return;
+            }
+            
+            // 添加新坐标点
+            const newNote = {
+                id: `note_${Date.now()}`,
+                name,
+                x,
+                y,
+                content
+            };
+            state.notes.push(newNote);
+            
+            // 清空输入框
+            manualNoteContent.value = '';
+            
+            // 更新列表和渲染
+            updateNoteList();
+            renderMap();
+            
+            alert('坐标点添加成功！');
+        }
+                /**
+         * 6. 保存元素到地图文件（覆盖或创建）
+         */
+        function saveElementsToFile() {
+            const currentMapName = document.getElementById('currentMapName').value.trim();
+            if (!currentMapName) {
+                alert('请先输入当前地图名称！');
+                return;
+            }
+            
+            // 构建完整的地图数据
+            const mapData = {
+                mapName: currentMapName,
+                scale: state.scale,
+                mapSize: state.mapSize,
+                unit: state.unit,
+                notes: [...state.notes],
+                rangeMarkers: [...state.rangeMarkers],
+                mapRelations: [...state.mapRelations],
+                lastSaved: new Date().toLocaleString()
+            };
+            
+            // 保存到内存
+            state.savedMaps[currentMapName] = mapData;
+            
+            // 生成JSON文件并保存
+            const jsonStr = JSON.stringify(mapData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            
+            // 如果已存在同名地图，询问是否覆盖
+            if (Object.keys(state.savedMaps).includes(currentMapName)) {
+                if (confirm(`【${currentMapName}】地图已存在，是否覆盖保存？`)) {
+                    saveAs(blob, `${currentMapName}_elements.json`);
+                    alert(`已保存【${currentMapName}】的元素到地图文件！`);
+                }
+            } else {
+                saveAs(blob, `${currentMapName}_elements.json`);
+                alert(`已创建并保存【${currentMapName}】的地图文件！`);
+            }
+            
+            // 更新已保存地图列表
+            updateSavedMapsList();
+        }
+
+        /**
+         * 7. 保存当前地图（新建文件）
+         */
+        function saveCurrentMap() {
+            const currentMapName = document.getElementById('currentMapName').value.trim() || '未命名地图';
+            
+            // 构建完整的地图数据
+            const mapData = {
+                mapName: currentMapName,
+                scale: state.scale,
+                mapSize: state.mapSize,
+                unit: state.unit,
+                notes: [...state.notes],
+                rangeMarkers: [...state.rangeMarkers],
+                mapRelations: [...state.mapRelations],
+                createTime: new Date().toLocaleString(),
+                lastSaved: new Date().toLocaleString()
+            };
+            
+            // 生成JSON文件下载（带时间戳）
+            const jsonStr = JSON.stringify(mapData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            saveAs(blob, `${currentMapName}_${Date.now()}.json`);
+            
+            // 同时保存到已保存地图列表
+            state.savedMaps[currentMapName] = mapData;
+            updateSavedMapsList();
+        }
+
+        /**
+         * 8. 导出所有地图元素为一个整合文件
+         */
+        function exportAllMaps() {
+            if (Object.keys(state.savedMaps).length === 0) {
+                alert('暂无保存的地图数据！');
+                return;
+            }
+            
+            // 构建整合数据
+            const allMapsData = {
+                exportTime: new Date().toLocaleString(),
+                mapCount: Object.keys(state.savedMaps).length,
+                maps: state.savedMaps
+            };
+            
+            // 生成JSON文件
+            const jsonStr = JSON.stringify(allMapsData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            saveAs(blob, `所有地图元素_${Date.now()}.json`);
+            
+            alert(`已导出${Object.keys(state.savedMaps).length}个地图的所有元素！`);
+        }
+
+        /**
+         * 9. 加载已保存的地图元素
+         */
+        function loadSavedMap(mapName) {
+            if (!state.savedMaps[mapName]) {
+                alert(`未找到【${mapName}】地图数据！`);
+                return;
+            }
+            
+            const mapData = state.savedMaps[mapName];
+            
+            // 更新全局状态
+            state.scale = Math.max(0.1, Math.min(2, mapData.scale));
+            state.mapSize = mapData.mapSize || 2000;
+            state.offsetX = 0;
+            state.offsetY = 0;
+            state.notes = mapData.notes || [];
+            state.rangeMarkers = mapData.rangeMarkers || [];
+            state.mapRelations = mapData.mapRelations || [];
+            state.unit = mapData.unit || { name: '里', desc: '1里=500米' };
+            
+            // 更新页面显示
+            document.getElementById('currentMapName').value = mapData.mapName || mapName;
+            document.getElementById('unitName').value = state.unit.name;
+            document.getElementById('unitDesc').value = state.unit.desc;
+            unitDescDisplay.textContent = state.unit.desc;
+            
+            updateAllLists();
+            renderMap();
+            
+            alert(`已加载【${mapName}】地图的所有元素！`);
+        }
+
+        /**
+         * 10. 删除已保存的地图
+         */
+        function deleteSavedMap(mapName) {
+            if (confirm(`确定要删除【${mapName}】地图的保存数据吗？`)) {
+                delete state.savedMaps[mapName];
+                updateSavedMapsList();
+                
+                // 如果当前显示的是该地图，清空显示
+                if (document.getElementById('currentMapName').value === mapName) {
+                    document.getElementById('currentMapName').value = '主世界地图';
+                }
+                
+                alert(`已删除【${mapName}】地图的保存数据！`);
+            }
+        }
+
+        /**
+         * 11. 更新已保存地图列表显示
+         */
+        function updateSavedMapsList() {
+            if (Object.keys(state.savedMaps).length === 0) {
+                savedMapsList.innerHTML = '暂无保存的地图';
+                return;
+            }
+            
+            savedMapsList.innerHTML = '';
+            Object.keys(state.savedMaps).forEach(mapName => {
+                const mapData = state.savedMaps[mapName];
+                const item = document.createElement('div');
+                item.className = 'saved-map-item';
+                item.innerHTML = `
+                    <span>${mapName}</span>
+                    <div>
+                        <button class="list-btn saved-map-btn" onclick="loadSavedMap('${mapName}')">加载</button>
+                        <button class="list-btn btn-danger saved-map-btn" onclick="deleteSavedMap('${mapName}')">删除</button>
+                    </div>
+                `;
+                savedMapsList.appendChild(item);
+            });
+        }
+
+        /**
+         * 12. 空白处点击关闭备注框
+         */
+        function handleDocumentClick(e) {
+            if (!noteBox.contains(e.target) && e.target !== canvas && !e.target.classList.contains('list-btn')) {
+                noteBox.style.display = 'none';
+                state.currentNoteId = null;
+                state.isEditingNote = false;
+                toggleNoteEditMode(false);
+            }
+        }
+
+        /**
+         * 13. JSON读取地图
+         */
+        function loadMap(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const jsonData = JSON.parse(event.target.result);
+                    // 校验核心字段
+                    const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
+                    const missingFields = requiredFields.filter(field => !jsonData.hasOwnProperty(field));
+                    if (missingFields.length > 0) {
+                        throw new Error(`JSON文件缺失核心字段：${missingFields.join(',')}`);
+                    }
+                    
+                    // 保存到已保存地图列表
+                    const mapName = jsonData.mapName || '未命名地图';
+                    state.savedMaps[mapName] = jsonData;
+                    
+                    // 更新全局状态
+                    state.scale = Math.max(0.1, Math.min(2, jsonData.scale));
+                    state.mapSize = jsonData.mapSize || 2000;
+                    state.offsetX = 0;
+                    state.offsetY = 0;
+                    state.notes = jsonData.notes || [];
+                    state.rangeMarkers = jsonData.rangeMarkers || [];
+                    state.mapRelations = jsonData.mapRelations || [];
+                    state.unit = jsonData.unit || { name: '里', desc: '1里=500米' };
+                    
+                    // 更新页面显示
+                    document.getElementById('currentMapName').value = mapName;
+                    document.getElementById('unitName').value = state.unit.name;
+                    document.getElementById('unitDesc').value = state.unit.desc;
+                    unitDescDisplay.textContent = state.unit.desc;
+                    
+                    updateAllLists();
+                    updateSavedMapsList();
+                    renderMap();
+                    
+                    alert(`已读取并保存【${mapName}】地图数据！`);
+                } catch (error) {
+                    alert(`地图读取失败：${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        /**
+         * 14. 批量导入地图（可选）
+         */
+        function batchLoadMaps(e) {
+            const files = e.target.files;
+            if (files.length === 0) return;
+            state.mapList = [];
+            state.currentMapIndex = -1;
+            
+            let loadedCount = 0;
+            
+            // 读取所有选中的JSON文件
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const jsonData = JSON.parse(event.target.result);
+                        // 校验核心字段
+                        const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
+                        const missingFields = requiredFields.filter(field => !jsonData.hasOwnProperty(field));
+                        if (missingFields.length > 0) throw new Error(`缺失字段：${missingFields.join(',')}`);
+                        
+                        const mapName = jsonData.mapName || file.name.replace('.json', '');
+                        
+                        // 添加到地图列表
+                        state.mapList.push({
+                            fileName: file.name,
+                            mapName: mapName,
+                            data: jsonData
+                        });
+                        
+                        // 保存到已保存地图列表
+                        state.savedMaps[mapName] = jsonData;
+                        
+                        loadedCount++;
+                        
+                        // 更新地图列表显示
+                        updateMapList();
+                        updateSavedMapsList();
+                        
+                        if (loadedCount === files.length) {
+                            alert(`成功导入${loadedCount}个地图文件！`);
+                        }
+                    } catch (error) {
+                        alert(`文件${file.name}解析失败：${error.message}`);
+                    }
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        /**
+         * 15. 切换地图（批量导入后）
+         */
+        function switchMap(index) {
+            if (index < 0 || index >= state.mapList.length) return;
+            
+            const mapData = state.mapList[index].data;
+            const mapName = state.mapList[index].mapName;
+            
+            // 更新全局状态
+            state.scale = Math.max(0.1, Math.min(2, mapData.scale));
+            state.mapSize = mapData.mapSize || 2000;
+            state.offsetX = 0;
+            state.offsetY = 0;
+            state.notes = mapData.notes || [];
+            state.rangeMarkers = mapData.rangeMarkers || [];
+            state.mapRelations = mapData.mapRelations || [];
+            state.unit = mapData.unit || { name: '里', desc: '1里=500米' };
+            state.currentMapIndex = index;
+            
+            // 更新页面显示
+            document.getElementById('currentMapName').value = mapName;
+            document.getElementById('unitName').value = state.unit.name;
+            document.getElementById('unitDesc').value = state.unit.desc;
+            unitDescDisplay.textContent = state.unit.desc;
+            
+            updateAllLists();
+            updateMapList(); // 更新选中状态
+            renderMap();
+        }
+                /**
+         * 16. 清空所有数据
+         */
+        function clearAllData() {
+            if (confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+                state.scale = 1;
+                state.mapSize = 2000;
+                state.offsetX = 0;
+                state.offsetY = 0;
+                state.notes = [];
+                state.rangeMarkers = [];
+                state.mapRelations = [];
+                state.unit = { name: '里', desc: '1里=500米' };
+                state.currentNoteId = null;
+                state.currentMapIndex = -1;
+                state.mapList = [];
+                
+                // 询问是否同时删除已保存的地图
+                if (confirm('是否同时删除所有已保存的地图数据？')) {
+                    state.savedMaps = {};
+                }
+                
+                // 更新页面显示
+                document.getElementById('unitName').value = '里';
+                document.getElementById('unitDesc').value = '1里=500米';
+                unitDescDisplay.textContent = '1里=500米';
+                document.getElementById('currentMapName').value = '主世界地图';
+                manualNoteName.value = '新坐标点';
+                manualNoteX.value = '1000';
+                manualNoteY.value = '1000';
+                manualNoteContent.value = '';
+                markerName.value = '新区域';
+                
+                updateAllLists();
+                updateSavedMapsList();
+                renderMap();
+            }
+        }
+
+        /**
+         * 17. 范围标识：切换参数表单（矩形/圆形）
+         */
+        function toggleMarkerParams() {
+            const type = document.getElementById('markerType').value;
+            document.getElementById('rectParams').style.display = type === 'rect' ? 'block' : 'none';
+            document.getElementById('circleParams').style.display = type === 'circle' ? 'block' : 'none';
+        }
+
+        /**
+         * 18. 范围标识：添加标识（带名称）
+         */
+        function addRangeMarker() {
+            const name = markerName.value.trim();
+            if (!name) {
+                alert('标识名称不能为空！');
+                return;
+            }
+            
+            const type = document.getElementById('markerType').value;
+            let params = {};
+            let isValid = true;
+
+            try {
+                if (type === 'rect') {
+                    // 读取矩形参数并验证
+                    const x1 = parseInt(document.getElementById('rectX1').value);
+                    const y1 = parseInt(document.getElementById('rectY1').value);
+                    const x2 = parseInt(document.getElementById('rectX2').value);
+                    const y2 = parseInt(document.getElementById('rectY2').value);
+                    const x3 = parseInt(document.getElementById('rectX3').value);
+                    const y3 = parseInt(document.getElementById('rectY3').value);
+                    const x4 = parseInt(document.getElementById('rectX4').value);
+                    const y4 = parseInt(document.getElementById('rectY4').value);
+                    // 验证坐标范围（0~2000）
+                    const coords = [x1, y1, x2, y2, x3, y3, x4, y4];
+                    if (coords.some(c => isNaN(c) || c < 0 || c > 2000)) {
+                        isValid = false;
+                        throw new Error('矩形坐标必须是0~2000的整数');
+                    }
+                    params = { x1, y1, x2, y2, x3, y3, x4, y4 };
+                } else if (type === 'circle') {
+                    // 读取圆形参数并验证
+                    const cx = parseInt(document.getElementById('circleCx').value);
+                    const cy = parseInt(document.getElementById('circleCy').value);
+                    const r = parseInt(document.getElementById('circleR').value);
+                    // 验证坐标（0~2000）和半径（0~1000）
+                    if (isNaN(cx) || cx < 0 || cx > 2000 || isNaN(cy) || cy < 0 || cy > 2000) {
+                        isValid = false;
+                        throw new Error('圆心坐标必须是0~2000的整数');
+                    }
+                    if (isNaN(r) || r < 0 || r > 1000) {
+                        isValid = false;
+                        throw new Error('半径必须是0~1000的整数');
+                    }
+                    params = { cx, cy, r };
+                }
+
+                if (isValid) {
+                    // 添加新标识
+                    const newMarker = {
+                        id: `marker_${Date.now()}`,
+                        name,
+                        type,
+                        params
+                    };
+                    state.rangeMarkers.push(newMarker);
+                    // 更新列表和渲染
+                    updateMarkerList();
+                    renderMap();
+                }
+            } catch (error) {
+                alert(`添加标识失败：${error.message}`);
+            }
+        }
+
+        /**
+         * 19. 范围标识：编辑标识（带名称）
+         */
+        function editMarker(markerId) {
+            const marker = state.rangeMarkers.find(m => m.id === markerId);
+            if (!marker) return;
+
+            // 填充表单
+            markerName.value = marker.name;
+            document.getElementById('markerType').value = marker.type;
+            toggleMarkerParams(); // 切换表单显示
+            if (marker.type === 'rect') {
+                const { x1, y1, x2, y2, x3, y3, x4, y4 } = marker.params;
+                document.getElementById('rectX1').value = x1;
+                document.getElementById('rectY1').value = y1;
+                document.getElementById('rectX2').value = x2;
+                document.getElementById('rectY2').value = y2;
+                document.getElementById('rectX3').value = x3;
+                document.getElementById('rectY3').value = y3;
+                document.getElementById('rectX4').value = x4;
+                document.getElementById('rectY4').value = y4;
+            } else if (marker.type === 'circle') {
+                const { cx, cy, r } = marker.params;
+                document.getElementById('circleCx').value = cx;
+                document.getElementById('circleCy').value = cy;
+                document.getElementById('circleR').value = r;
+            }
+
+            // 删除原标识（后续重新添加）
+            state.rangeMarkers = state.rangeMarkers.filter(m => m.id !== markerId);
+            updateMarkerList();
+        }
+
+        /**
+         * 20. 范围标识：删除标识
+         */
+        function deleteMarker(markerId) {
+            state.rangeMarkers = state.rangeMarkers.filter(m => m.id !== markerId);
+            updateMarkerList();
+            renderMap();
+        }
+
+        /**
+         * 21. 量化单位：保存设置
+         */
+        function saveUnitSetting() {
+            const name = document.getElementById('unitName').value.trim();
+            const desc = document.getElementById('unitDesc').value.trim();
+            if (!name || !desc) {
+                alert('单位名称和说明不能为空！');
+                return;
+            }
+            // 更新状态和显示
+            state.unit = { name, desc };
+            unitDescDisplay.textContent = desc;
+            alert('单位设置保存成功！');
+        }
+
+        /**
+         * 22. 地图关联：添加双向关联（完整实现）
+         */
+        function addMapRelation() {
+            const currentMapName = document.getElementById('currentMapName').value.trim();
+            const targetMapName = document.getElementById('targetMapName').value.trim();
+            const currentMapXY = document.getElementById('currentMapXY').value.trim();
+            const targetMapXY = document.getElementById('targetMapXY').value.trim();
+
+            // 验证输入
+            if (!currentMapName || !targetMapName || !currentMapXY || !targetMapXY) {
+                alert('所有字段不能为空！');
+                return;
+            }
+            
+            // 检查目标地图是否存在（已保存的地图中）
+            const targetMapExists = state.savedMaps.hasOwnProperty(targetMapName);
+            
+            if (!targetMapExists) {
+                alert(`错误：未找到【${targetMapName}】地图，请先保存该地图！`);
+                return;
+            }
+
+            // 验证坐标格式（x,y）
+            const xyRegex = /^\d{1,4},\d{1,4}$/;
+            if (!xyRegex.test(currentMapXY) || !xyRegex.test(targetMapXY)) {
+                alert('坐标格式错误，应为"x,y"（0~2000）');
+                return;
+            }
+            
+            // 验证坐标范围
+            const [cx, cy] = currentMapXY.split(',').map(Number);
+            const [tx, ty] = targetMapXY.split(',').map(Number);
+            
+            if (cx < 0 || cx > 2000 || cy < 0 || cy > 2000 || tx < 0 || tx > 2000 || ty < 0 || ty > 2000) {
+                alert('坐标值必须在0~2000之间！');
+                return;
+            }
+
+            // 添加当前地图的关联
+            const newRelation = {
+                id: `relation_${Date.now()}`,
+                currentMapName,
+                currentXY: currentMapXY,
+                targetMapName,
+                targetXY: targetMapXY
+            };
+            state.mapRelations.push(newRelation);
+            
+            // 在目标地图中添加反向关联
+            if (state.savedMaps[targetMapName]) {
+                const reverseRelation = {
+                    id: `relation_${Date.now()}_reverse`,
+                    currentMapName: targetMapName,
+                    currentXY: targetMapXY,
+                    targetMapName: currentMapName,
+                    targetXY: currentMapXY
+                };
+                
+                // 更新已保存的目标地图数据
+                state.savedMaps[targetMapName].mapRelations = state.savedMaps[targetMapName].mapRelations || [];
+                state.savedMaps[targetMapName].mapRelations.push(reverseRelation);
+                
+                // 如果目标地图已加载到当前显示，则直接添加
+                if (document.getElementById('currentMapName').value === targetMapName) {
+                    state.mapRelations.push(reverseRelation);
+                }
+            }
+
+            // 更新列表和渲染
+            updateRelationList();
+            renderMap();
+            
+            alert(`双向关联添加成功！已在【${currentMapName}】和【${targetMapName}】中创建关联标识。`);
+        }
+
+        /**
+         * 23. 地图关联：删除关联
+         */
+        function deleteRelation(relationId) {
+            // 删除当前地图中的关联
+            const deletedRelation = state.mapRelations.find(r => r.id === relationId);
+            state.mapRelations = state.mapRelations.filter(r => r.id !== relationId);
+            
+            // 如果有反向关联，也一并删除
+            if (deletedRelation && state.savedMaps[deletedRelation.targetMapName]) {
+                const targetRelations = state.savedMaps[deletedRelation.targetMapName].mapRelations || [];
+                state.savedMaps[deletedRelation.targetMapName].mapRelations = targetRelations.filter(
+                    r => !(r.targetMapName === deletedRelation.currentMapName && r.targetXY === deletedRelation.currentXY)
+                );
+            }
+            
+            updateRelationList();
+            renderMap();
+        }
+
+        /**
+         * 24. 坐标点：查看坐标点详情
+         */
+        function showNoteBox(noteId) {
+            const note = state.notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            state.currentNoteId = noteId;
+            state.isEditingNote = false;
+            
+            // 填充坐标点信息
+            noteNameDisplay.textContent = note.name;
+            noteContentDisplay.textContent = note.content;
+            noteContentTextarea.value = note.content;
+            state.originalNoteContent = note.content;
+            
+            // 计算备注框在页面上的位置（基于Canvas坐标和缩放偏移）
+            const rect = canvas.getBoundingClientRect();
+            const displayX = (note.x - state.offsetX) * state.scale + rect.left + canvas.width / 2 - state.mapSize * state.scale / 2;
+            const displayY = (note.y - state.offsetY) * state.scale + rect.top + canvas.height / 2 - state.mapSize * state.scale / 2;
+            
+            // 设置备注框位置（避免超出可视区域）
+            noteBox.style.left = `${Math.min(displayX + 20, rect.right - 270)}px`;
+            noteBox.style.top = `${Math.min(displayY + 20, rect.bottom - 150)}px`;
+            
+            // 切换到查看模式
+            toggleNoteEditMode(false);
+            
+            // 显示备注框
+            noteBox.style.display = 'block';
+        }
+
+        /**
+         * 25. 坐标点：开始编辑备注
+         */
+        function startEditNote() {
+            if (!state.currentNoteId) return;
+            
+            state.isEditingNote = true;
+            toggleNoteEditMode(true);
+        }
+
+        /**
+         * 26. 坐标点：保存编辑的备注
+         */
+        function saveEditNote() {
+            if (!state.currentNoteId) return;
+            
+            const note = state.notes.find(n => n.id === state.currentNoteId);
+            if (!note) return;
+            
+            const newContent = noteContentTextarea.value.trim();
+            if (newContent.length > 200) {
+                alert('备注字数不能超过200字！');
+                return;
+            }
+            
+            note.content = newContent || '无备注';
+            noteContentDisplay.textContent = note.content;
+            
+            state.isEditingNote = false;
+            toggleNoteEditMode(false);
+            
+            // 更新列表和渲染
+            updateNoteList();
+            renderMap();
+        }
+
+        /**
+         * 27. 坐标点：取消编辑备注
+         */
+        function cancelEditNote() {
+            noteContentTextarea.value = state.originalNoteContent;
+            state.isEditingNote = false;
+            toggleNoteEditMode(false);
+        }
+
+        /**
+         * 28. 坐标点：删除坐标点
+         */
+        function deleteNote(noteId) {
+            if (!noteId) return;
+            
+            if (confirm('确定要删除此坐标点吗？')) {
+                state.notes = state.notes.filter(n => n.id !== noteId);
+                noteBox.style.display = 'none';
+                state.currentNoteId = null;
+                state.isEditingNote = false;
+                updateNoteList();
+                renderMap();
+            }
+        }
+
+        /**
+         * 切换备注编辑/查看模式
+         */
+        function toggleNoteEditMode(isEditing) {
+            noteContentDisplay.style.display = isEditing ? 'none' : 'block';
+            noteContentEdit.style.display = isEditing ? 'block' : 'none';
+            editNoteBtn.style.display = isEditing ? 'none' : 'block';
+            saveNoteBtn.style.display = isEditing ? 'block' : 'none';
+            cancelNoteBtn.style.display = isEditing ? 'block' : 'none';
+        } 
+                // ==================== 列表更新函数 ====================
+        /**
+         * 更新坐标点列表
+         */
+        function updateNoteList() {
+            const noteListEl = document.getElementById('noteList');
+            if (state.notes.length === 0) {
+                noteListEl.innerHTML = '暂无坐标点，点击地图或上方添加';
+                return;
+            }
+            noteListEl.innerHTML = '';
+            state.notes.forEach(note => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                
+                const contentText = note.content.length > 20 ? note.content.slice(0,20)+'...' : note.content;
+                item.innerHTML = `
+                    <div style="flex:1;">
+                        <div style="font-weight:600; color:#e74c3c;">${note.name}</div>
+                        <div style="font-size:12px; color:#666;">(${note.x},${note.y})：${contentText}</div>
+                    </div>
+                    <div>
+                        <button class="list-btn" onclick="showNoteBox('${note.id}')">查看</button>
+                        <button class="list-btn btn-danger" onclick="deleteNote('${note.id}')">删除</button>
+                    </div>
+                `;
+                noteListEl.appendChild(item);
+            });
+        }
+
+        /**
+         * 更新范围标识列表（显示名称）
+         */
+        function updateMarkerList() {
+            const markerListEl = document.getElementById('markerList');
+            if (state.rangeMarkers.length === 0) {
+                markerListEl.innerHTML = '暂无标识';
+                return;
+            }
+            markerListEl.innerHTML = '';
+            state.rangeMarkers.forEach(marker => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                let paramsText = '';
+                if (marker.type === 'rect') {
+                    const { x1, y1, x3, y3 } = marker.params;
+                    paramsText = `矩形 (${x1},${y1})~(${x3},${y3})`;
+                } else if (marker.type === 'circle') {
+                    const { cx, cy, r } = marker.params;
+                    paramsText = `圆形 (${cx},${cy}) r=${r}`;
+                }
+                item.innerHTML = `
+                    <div style="flex:1;">
+                        <div style="font-weight:600;">${marker.name}</div>
+                                                <div style="font-size:12px; color:#666;">${paramsText}</div>
+                    </div>
+                    <div>
+                        <button class="list-btn" onclick="editMarker('${marker.id}')">编辑</button>
+                        <button class="list-btn btn-danger" onclick="deleteMarker('${marker.id}')">删除</button>
+                    </div>
+                `;
+                markerListEl.appendChild(item);
+            });
+        }
+
+        /**
+         * 更新地图关联列表
+         */
+        function updateRelationList() {
+            const relationListEl = document.getElementById('relationList');
+            if (state.mapRelations.length === 0) {
+                relationListEl.innerHTML = '暂无关联';
+                return;
+            }
+            relationListEl.innerHTML = '';
+            state.mapRelations.forEach(relation => {
+                const item = document.createElement('div');
+                item.className = 'list-item';
+                item.innerHTML = `
+                    <span>${relation.currentMapName}(${relation.currentXY}) ↔ ${relation.targetMapName}(${relation.targetXY})</span>
+                    <button class="list-btn btn-danger" onclick="deleteRelation('${relation.id}')">删除</button>
+                `;
+                relationListEl.appendChild(item);
+            });
+        }
+
+        /**
+         * 更新地图列表（批量导入）- 带选中样式
+         */
+        function updateMapList() {
+            if (state.mapList.length === 0) {
+                mapList.style.display = 'none';
+                return;
+            }
+            mapList.style.display = 'block';
+            mapListContent.innerHTML = '';
+            state.mapList.forEach((map, index) => {
+                const item = document.createElement('div');
+                item.className = `map-list-item ${index === state.currentMapIndex ? 'active' : ''}`;
+                item.textContent = map.mapName;
+                item.addEventListener('click', () => switchMap(index));
+                mapListContent.appendChild(item);
+            });
+        }
+
+        /**
+         * 批量更新所有列表
+         */
+        function updateAllLists() {
+            updateNoteList();
+            updateMarkerList();
+            updateRelationList();
+            updateMapList();
+        }
+
+        // ==================== 全局函数暴露（供HTML调用） ====================
+        window.showNoteBox = showNoteBox;
+        window.editNote = startEditNote;
+        window.deleteNote = deleteNote;
+        window.editMarker = editMarker;
+        window.deleteMarker = deleteMarker;
+        window.deleteRelation = deleteRelation;
+        window.loadSavedMap = loadSavedMap;
+        window.deleteSavedMap = deleteSavedMap;
+        window.switchMap = switchMap;
+
+        // ==================== 启动工具 ====================
+        init();
+    </script>
+</body>
+</html>
