@@ -317,9 +317,13 @@
             <!-- 文件操作 -->
             <div class="func-group">
                 <div class="func-title">文件操作</div>
-                <button class="btn" id="saveBtn">保存当前地图（JSON）</button>
-                <button class="btn btn-success" id="saveElementsBtn">保存元素到地图文件</button>
-                <button class="btn btn-secondary" id="exportAllBtn">导出所有地图元素</button>
+                <!-- 工作目录选择（File System Access API） -->
+                <div style="margin-bottom:10px;padding:8px;background:#f0f7ff;border-radius:6px;border:1px solid #d0e3f7;">
+                    <button class="btn" id="selectDirBtn" style="width:100%;margin-bottom:5px;">📁 选择工作目录</button>
+                    <div id="dirStatus" style="font-size:12px;color:#888;">工作目录：未选择（使用下载模式）</div>
+                </div>
+                <button class="btn" id="saveBtn">💾 保存地图</button>
+                <button class="btn btn-secondary" id="exportAllBtn">📦 导出所有地图</button>
                 <input type="file" id="loadFile" accept=".json" style="display: none;">
                 <button class="btn" id="loadBtn">读取地图（JSON）</button>
                 <button class="btn btn-danger" id="clearBtn">清空所有数据</button>
@@ -333,6 +337,11 @@
                     <div class="saved-maps-list" id="savedMapsList">
                         暂无保存的地图
                     </div>
+                </div>
+                <!-- 工作目录文件列表 -->
+                <div class="form-group" id="dirFileListContainer" style="margin-top:10px;display:none;">
+                    <label>📂 目录文件</label>
+                    <div id="dirFileList" style="max-height:150px;overflow-y:auto;font-size:13px;"></div>
                 </div>
             </div>
 
@@ -509,6 +518,7 @@
             currentMap: null, // 当前显示的地图（批量导入时）
             mapList: [], // 导入的地图列表（批量导入时）
             savedMaps: {}, // 保存的地图数据（键：地图名称，值：完整地图数据）
+            workDirHandle: null, // File System Access API 目录句柄
             // 拖拽状态
             isDragging: false,
             dragStartX: 0,
@@ -547,8 +557,189 @@
         // 范围标识名称
         const markerName = document.getElementById('markerName');
         // 保存按钮
-        const saveElementsBtn = document.getElementById('saveElementsBtn');
         const exportAllBtn = document.getElementById('exportAllBtn');
+        // 工作目录
+        const selectDirBtn = document.getElementById('selectDirBtn');
+        const dirStatus = document.getElementById('dirStatus');
+        const dirFileListContainer = document.getElementById('dirFileListContainer');
+        const dirFileListEl = document.getElementById('dirFileList');
+
+        // ==================== IndexedDB（存储目录句柄） ====================
+        const FS_DB = 'novelMapFS';
+        const FS_STORE = 'handles';
+        function openFSDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(FS_DB, 1);
+                req.onupgradeneeded = e => {
+                    e.target.result.createObjectStore(FS_STORE);
+                };
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => reject(e.target.error);
+            });
+        }
+        async function saveDirHandle(handle) {
+            const db = await openFSDB();
+            const tx = db.transaction(FS_STORE, 'readwrite');
+            tx.objectStore(FS_STORE).put(handle, 'workDir');
+            return new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = rej; });
+        }
+        async function loadDirHandle() {
+            const db = await openFSDB();
+            const tx = db.transaction(FS_STORE, 'readonly');
+            const req = tx.objectStore(FS_STORE).get('workDir');
+            return new Promise((res) => {
+                req.onsuccess = () => res(req.result || null);
+                req.onerror = () => res(null);
+            });
+        }
+        async function clearDirHandle() {
+            const db = await openFSDB();
+            const tx = db.transaction(FS_STORE, 'readwrite');
+            tx.objectStore(FS_STORE).delete('workDir');
+        }
+
+        // ==================== File System Access API ====================
+        const hasFSAccess = 'showDirectoryPicker' in window;
+
+        async function selectWorkDir() {
+            if (!hasFSAccess) {
+                alert('当前浏览器不支持目录读写，请使用 Chrome 86+ 或 Edge 86+');
+                return;
+            }
+            try {
+                const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                state.workDirHandle = handle;
+                await saveDirHandle(handle);
+                dirStatus.textContent = `工作目录：${handle.name}`;
+                dirStatus.style.color = '#2e7d32';
+                await listMapFiles();
+            } catch (e) {
+                if (e.name !== 'AbortError') console.error('选择目录失败:', e);
+            }
+        }
+
+        async function verifyDirPermission(handle) {
+            if (!handle) return false;
+            const opts = { mode: 'readwrite' };
+            if ((await handle.queryPermission(opts)) === 'granted') return true;
+            if ((await handle.requestPermission(opts)) === 'granted') return true;
+            return false;
+        }
+
+        async function restoreWorkDir() {
+            if (!hasFSAccess) {
+                dirStatus.textContent = '工作目录：浏览器不支持，使用下载模式';
+                return;
+            }
+            try {
+                const handle = await loadDirHandle();
+                if (handle && await verifyDirPermission(handle)) {
+                    state.workDirHandle = handle;
+                    dirStatus.textContent = `工作目录：${handle.name}`;
+                    dirStatus.style.color = '#2e7d32';
+                    await listMapFiles();
+                }
+            } catch (e) {
+                console.warn('恢复工作目录失败:', e);
+            }
+        }
+
+        async function listMapFiles() {
+            if (!state.workDirHandle) {
+                dirFileListContainer.style.display = 'none';
+                return;
+            }
+            dirFileListContainer.style.display = 'block';
+            dirFileListEl.innerHTML = '';
+            try {
+                for await (const [name, entry] of state.workDirHandle.entries()) {
+                    if (entry.kind === 'file' && name.endsWith('.json')) {
+                        const row = document.createElement('div');
+                        row.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #eee;';
+                        const span = document.createElement('span');
+                        span.textContent = '📄 ' + name;
+                        span.style.flex = '1';
+                        const btn = document.createElement('button');
+                        btn.textContent = '加载';
+                        btn.style.cssText = 'font-size:11px;padding:2px 8px;cursor:pointer;border:1px solid #ccc;border-radius:3px;background:#fff;';
+                        btn.addEventListener('click', () => loadMapFromDir(name));
+                        row.appendChild(span);
+                        row.appendChild(btn);
+                        dirFileListEl.appendChild(row);
+                    }
+                }
+            } catch (e) {
+                dirFileListEl.textContent = '读取目录失败: ' + e.message;
+            }
+        }
+
+        async function loadMapFromDir(fileName) {
+            if (!state.workDirHandle) return;
+            try {
+                const fileHandle = await state.workDirHandle.getFileHandle(fileName);
+                const file = await fileHandle.getFile();
+                const text = await file.text();
+                const jsonData = JSON.parse(text);
+                // 校验核心字段
+                const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
+                const missing = requiredFields.filter(f => !jsonData.hasOwnProperty(f));
+                if (missing.length > 0) throw new Error(`缺失字段：${missing.join(',')}`);
+                applyMapData(jsonData, jsonData.mapName || fileName.replace('.json', ''));
+                showToast(`已加载：${fileName}`);
+            } catch (e) {
+                alert(`加载失败：${e.message}`);
+            }
+        }
+
+        async function saveToDir(data, fileName) {
+            if (!state.workDirHandle) return false;
+            try {
+                const fileHandle = await state.workDirHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(JSON.stringify(data, null, 2));
+                await writable.close();
+                await listMapFiles();
+                return true;
+            } catch (e) {
+                console.error('写入目录失败:', e);
+                return false;
+            }
+        }
+
+        // Toast 提示
+        function showToast(msg, duration = 2000) {
+            let toast = document.getElementById('fsToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'fsToast';
+                toast.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 24px;border-radius:8px;font-size:14px;z-index:9999;opacity:0;transition:opacity 0.3s;';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, duration);
+        }
+
+        // 统一应用地图数据到 state 和 UI
+        function applyMapData(data, mapName) {
+            state.scale = Math.max(0.1, Math.min(2, data.scale));
+            state.mapSize = data.mapSize || 2000;
+            state.offsetX = 0;
+            state.offsetY = 0;
+            state.notes = data.notes || [];
+            state.rangeMarkers = data.rangeMarkers || [];
+            state.mapRelations = data.mapRelations || [];
+            state.unit = data.unit || { name: '里', desc: '1里=500米' };
+            state.savedMaps[mapName] = data;
+            document.getElementById('currentMapName').value = mapName;
+            document.getElementById('unitName').value = state.unit.name;
+            document.getElementById('unitDesc').value = state.unit.desc;
+            unitDescDisplay.textContent = state.unit.desc;
+            updateAllLists();
+            updateSavedMapsList();
+            renderMap();
+        }
 
         // ==================== 初始化 ====================
         function init() {
@@ -564,6 +755,8 @@
             updateAllLists();
             // 更新已保存地图列表
             updateSavedMapsList();
+            // 恢复工作目录
+            restoreWorkDir();
         }
 
         // 适配Canvas尺寸
@@ -576,6 +769,8 @@
 
         // ==================== 事件绑定 ====================
         function bindEvents() {
+            // 0. 工作目录
+            selectDirBtn.addEventListener('click', selectWorkDir);
             // 1. 缩放事件（鼠标滚轮）
             canvas.addEventListener('wheel', handleWheel);
             // 2. 拖拽事件（鼠标）
@@ -589,8 +784,7 @@
             document.addEventListener('click', handleDocumentClick);
             // 5. 功能按钮事件
             document.getElementById('saveBtn').addEventListener('click', saveCurrentMap);
-            saveElementsBtn.addEventListener('click', saveElementsToFile);
-            exportAllBtn.addEventListener('click', exportAllMaps);
+            document.getElementById('exportAllBtn').addEventListener('click', exportAllMaps);
             document.getElementById('loadBtn').addEventListener('click', () => document.getElementById('loadFile').click());
             document.getElementById('loadFile').addEventListener('change', loadMap);
             document.getElementById('clearBtn').addEventListener('click', clearAllData);
@@ -727,31 +921,20 @@
                 ctx.stroke();
             });
 
-            // 绘制地图关联标识和文字
+            // 绘制地图关联标识（🚪 传送门风格）
             state.mapRelations.forEach(relation => {
                 const [x, y] = relation.currentXY.split(',').map(Number);
-                
-                // 绘制关联标记（双向箭头）
-                ctx.fillStyle = '#3498db';
-                ctx.beginPath();
-                ctx.moveTo(x - 10 / state.scale, y);
-                ctx.lineTo(x + 10 / state.scale, y);
-                ctx.lineTo(x + 5 / state.scale, y - 5 / state.scale);
-                ctx.moveTo(x + 10 / state.scale, y);
-                ctx.lineTo(x + 5 / state.scale, y + 5 / state.scale);
-                ctx.moveTo(x - 10 / state.scale, y);
-                ctx.lineTo(x - 5 / state.scale, y - 5 / state.scale);
-                ctx.moveTo(x - 10 / state.scale, y);
-                ctx.lineTo(x - 5 / state.scale, y + 5 / state.scale);
-                ctx.stroke();
-                
-                // 绘制关联文字
-                const text = `↔ ${relation.targetMapName}`;
-                ctx.fillStyle = '#2c3e50';
-                ctx.font = `${14 / state.scale}px sans-serif`;
-                ctx.textAlign = 'left';
+                const s = state.scale;
+
+                ctx.font = `${24 / s}px sans-serif`;
+                ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(text, x + 15 / state.scale, y);
+                ctx.fillText('🚪', x, y);
+
+                ctx.font = `bold ${13 / s}px sans-serif`;
+                ctx.fillStyle = '#2c3e50';
+                ctx.textAlign = 'left';
+                ctx.fillText(relation.targetMapName, x + 18 / s, y);
             });
 
             // 绘制坐标点标记和名称
@@ -946,7 +1129,6 @@
                 return;
             }
             
-            // 构建完整的地图数据
             const mapData = {
                 mapName: currentMapName,
                 scale: state.scale,
@@ -958,25 +1140,26 @@
                 lastSaved: new Date().toLocaleString()
             };
             
-            // 保存到内存
             state.savedMaps[currentMapName] = mapData;
+            const fileName = `${currentMapName}_elements.json`;
             
-            // 生成JSON文件并保存
-            const jsonStr = JSON.stringify(mapData, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            
-            // 如果已存在同名地图，询问是否覆盖
-            if (Object.keys(state.savedMaps).includes(currentMapName)) {
-                if (confirm(`【${currentMapName}】地图已存在，是否覆盖保存？`)) {
-                    saveAs(blob, `${currentMapName}_elements.json`);
-                    alert(`已保存【${currentMapName}】的元素到地图文件！`);
-                }
+            if (state.workDirHandle) {
+                saveToDir(mapData, fileName).then(ok => {
+                    if (ok) showToast(`已保存到目录：${fileName}`);
+                    else fallbackDownload(mapData, fileName);
+                });
+                alert(`已保存【${currentMapName}】的元素到地图文件！`);
             } else {
-                saveAs(blob, `${currentMapName}_elements.json`);
-                alert(`已创建并保存【${currentMapName}】的地图文件！`);
+                if (Object.keys(state.savedMaps).includes(currentMapName)) {
+                    if (confirm(`【${currentMapName}】地图已存在，是否覆盖保存？`)) {
+                        fallbackDownload(mapData, fileName);
+                        alert(`已保存【${currentMapName}】的元素到地图文件！`);
+                    }
+                } else {
+                    fallbackDownload(mapData, fileName);
+                    alert(`已创建并保存【${currentMapName}】的地图文件！`);
+                }
             }
-            
-            // 更新已保存地图列表
             updateSavedMapsList();
         }
 
@@ -986,7 +1169,6 @@
         function saveCurrentMap() {
             const currentMapName = document.getElementById('currentMapName').value.trim() || '未命名地图';
             
-            // 构建完整的地图数据
             const mapData = {
                 mapName: currentMapName,
                 scale: state.scale,
@@ -999,14 +1181,25 @@
                 lastSaved: new Date().toLocaleString()
             };
             
-            // 生成JSON文件下载（带时间戳）
-            const jsonStr = JSON.stringify(mapData, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            saveAs(blob, `${currentMapName}_${Date.now()}.json`);
-            
-            // 同时保存到已保存地图列表
             state.savedMaps[currentMapName] = mapData;
+            const fileName = `${currentMapName}.json`;
+            
+            // 优先写入工作目录
+            if (state.workDirHandle) {
+                saveToDir(mapData, fileName).then(ok => {
+                    if (ok) showToast(`已保存到目录：${fileName}`);
+                    else { fallbackDownload(mapData, fileName); }
+                });
+            } else {
+                fallbackDownload(mapData, fileName);
+            }
             updateSavedMapsList();
+        }
+
+        function fallbackDownload(data, fileName) {
+            const jsonStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            saveAs(blob, fileName);
         }
 
         /**
@@ -1018,18 +1211,22 @@
                 return;
             }
             
-            // 构建整合数据
             const allMapsData = {
                 exportTime: new Date().toLocaleString(),
                 mapCount: Object.keys(state.savedMaps).length,
                 maps: state.savedMaps
             };
             
-            // 生成JSON文件
-            const jsonStr = JSON.stringify(allMapsData, null, 2);
-            const blob = new Blob([jsonStr], { type: 'application/json' });
-            saveAs(blob, `所有地图元素_${Date.now()}.json`);
+            const fileName = `所有地图元素.json`;
             
+            if (state.workDirHandle) {
+                saveToDir(allMapsData, fileName).then(ok => {
+                    if (ok) showToast(`已导出到目录：${fileName}`);
+                    else fallbackDownload(allMapsData, fileName);
+                });
+            } else {
+                fallbackDownload(allMapsData, fileName);
+            }
             alert(`已导出${Object.keys(state.savedMaps).length}个地图的所有元素！`);
         }
 
@@ -1490,6 +1687,11 @@
                 if (document.getElementById('currentMapName').value === targetMapName) {
                     state.mapRelations.push(reverseRelation);
                 }
+
+                // 同时写入目标地图的 JSON 文件
+                if (state.workDirHandle) {
+                    saveToDir(state.savedMaps[targetMapName], `${targetMapName}.json`);
+                }
             }
 
             // 更新列表和渲染
@@ -1507,12 +1709,15 @@
             const deletedRelation = state.mapRelations.find(r => r.id === relationId);
             state.mapRelations = state.mapRelations.filter(r => r.id !== relationId);
             
-            // 如果有反向关联，也一并删除
+            // 如果有反向关联，也一并删除并写入目标地图 JSON
             if (deletedRelation && state.savedMaps[deletedRelation.targetMapName]) {
                 const targetRelations = state.savedMaps[deletedRelation.targetMapName].mapRelations || [];
                 state.savedMaps[deletedRelation.targetMapName].mapRelations = targetRelations.filter(
                     r => !(r.targetMapName === deletedRelation.currentMapName && r.targetXY === deletedRelation.currentXY)
                 );
+                if (state.workDirHandle) {
+                    saveToDir(state.savedMaps[deletedRelation.targetMapName], `${deletedRelation.targetMapName}.json`);
+                }
             }
             
             updateRelationList();
@@ -1750,6 +1955,7 @@
 
         // ==================== 启动工具 ====================
         init();
+        // v2026-03-25: Added File System Access API support
     </script>
 </body>
 </html>
