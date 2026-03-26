@@ -611,6 +611,24 @@
                 const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
                 state.workDirHandle = handle;
                 await saveDirHandle(handle);
+                // 清空旧目录相关数据
+                state.savedMaps = {};
+                state.mapList = [];
+                state.currentMapIndex = -1;
+                state.notes = [];
+                state.rangeMarkers = [];
+                state.mapRelations = [];
+                state.scale = 1;
+                state.offsetX = 0;
+                state.offsetY = 0;
+                document.getElementById('currentMapName').value = '主世界地图';
+                document.getElementById('unitName').value = '里';
+                document.getElementById('unitDesc').value = '1里=500米';
+                unitDescDisplay.textContent = '1里=500米';
+                mapList.style.display = 'none';
+                updateAllLists();
+                updateSavedMapsList();
+                renderMap();
                 dirStatus.textContent = `工作目录：${handle.name}`;
                 dirStatus.style.color = '#2e7d32';
                 await listMapFiles();
@@ -724,6 +742,7 @@
 
         // 统一应用地图数据到 state 和 UI
         function applyMapData(data, mapName) {
+            autoSaveCurrentMap(); // 加载前自动保存当前地图
             state.scale = Math.max(0.1, Math.min(2, data.scale));
             state.mapSize = data.mapSize || 2000;
             state.offsetX = 0;
@@ -1237,6 +1256,7 @@
          * 9. 加载已保存的地图元素
          */
         function loadSavedMap(mapName) {
+            autoSaveCurrentMap(); // 切换前自动保存当前地图
             if (!state.savedMaps[mapName]) {
                 alert(`未找到【${mapName}】地图数据！`);
                 return;
@@ -1329,6 +1349,7 @@
             const reader = new FileReader();
             reader.onload = function(event) {
                 try {
+                    autoSaveCurrentMap(); // 读取文件前自动保存当前地图
                     const jsonData = JSON.parse(event.target.result);
                     // 校验核心字段
                     const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
@@ -1490,6 +1511,27 @@
         }
 
         /**
+         * 自动保存当前地图到 state.savedMaps（草稿模式，不触发文件下载）
+         */
+        function autoSaveCurrentMap() {
+            const currentMapName = document.getElementById('currentMapName').value.trim();
+            if (!currentMapName) return;
+            const hasContent = state.notes.length > 0 || state.rangeMarkers.length > 0 || state.mapRelations.length > 0;
+            if (!hasContent && !state.savedMaps.hasOwnProperty(currentMapName)) return;
+            state.savedMaps[currentMapName] = {
+                mapName: currentMapName,
+                scale: state.scale,
+                mapSize: state.mapSize,
+                unit: { ...state.unit },
+                notes: state.notes.map(n => ({...n})),
+                rangeMarkers: state.rangeMarkers.map(m => ({...m, params: {...m.params}})),
+                mapRelations: state.mapRelations.map(r => ({...r})),
+                lastSaved: new Date().toLocaleString()
+            };
+            updateSavedMapsList();
+        }
+
+        /**
          * 17. 新建空白地图（不刷新页面）
          */
         function createNewMap() {
@@ -1502,6 +1544,9 @@
             if (state.savedMaps.hasOwnProperty(name)) {
                 if (!confirm(`地图「${name}」已存在，是否覆盖创建？`)) return;
             }
+
+            // 2.5 自动保存当前地图草稿（防止丢失）
+            autoSaveCurrentMap();
 
             // 3. 重置 state
             state.scale = 1;
@@ -1535,6 +1580,19 @@
             // 6. 更新所有列表和渲染
             updateAllLists();
             renderMap();
+
+            // 7. 自动保存新创建的空白地图
+            state.savedMaps[name] = {
+                mapName: name,
+                scale: state.scale,
+                mapSize: state.mapSize,
+                unit: { ...state.unit },
+                notes: [],
+                rangeMarkers: [],
+                mapRelations: [],
+                lastSaved: new Date().toLocaleString()
+            };
+            updateSavedMapsList();
 
             showToast(`已创建空白地图「${name}」`);
         }
@@ -1709,6 +1767,13 @@
             
             if (cx < 0 || cx > 2000 || cy < 0 || cy > 2000 || tx < 0 || tx > 2000 || ty < 0 || ty > 2000) {
                 alert('坐标值必须在0~2000之间！');
+                return;
+            }
+
+            // 检查当前坐标是否已有关联（同一坐标只能关联一个目标地图）
+            const existingRelation = state.mapRelations.find(r => r.currentXY === currentMapXY);
+            if (existingRelation) {
+                alert(`坐标 (${currentMapXY}) 已关联地图「${existingRelation.targetMapName}」，不可重复关联！\n如需更换关联，请先删除原有关联。`);
                 return;
             }
 
