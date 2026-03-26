@@ -306,7 +306,8 @@
             background: #999;
         }
     </style>
-
+    <!-- 引入FileSaver.js用于JSON下载 -->
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 </head>
 <body>
     <div class="header">小说地图工具</div>
@@ -1220,14 +1221,7 @@
         function fallbackDownload(data, fileName) {
             const jsonStr = JSON.stringify(data, null, 2);
             const blob = new Blob([jsonStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            saveAs(blob, fileName);
         }
 
         /**
