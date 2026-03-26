@@ -322,6 +322,7 @@
                     <button class="btn" id="selectDirBtn" style="width:100%;margin-bottom:5px;">📁 选择工作目录</button>
                     <div id="dirStatus" style="font-size:12px;color:#888;">工作目录：未选择（使用下载模式）</div>
                 </div>
+                <button class="btn btn-success" id="newMapBtn">📄 新建地图</button>
                 <button class="btn" id="saveBtn">💾 保存地图</button>
                 <button class="btn btn-secondary" id="exportAllBtn">📦 导出所有地图</button>
                 <input type="file" id="loadFile" accept=".json" style="display: none;">
@@ -771,6 +772,8 @@
         function bindEvents() {
             // 0. 工作目录
             selectDirBtn.addEventListener('click', selectWorkDir);
+            // 0a. 新建地图
+            document.getElementById('newMapBtn').addEventListener('click', createNewMap);
             // 1. 缩放事件（鼠标滚轮）
             canvas.addEventListener('wheel', handleWheel);
             // 2. 拖拽事件（鼠标）
@@ -1487,7 +1490,57 @@
         }
 
         /**
-         * 17. 范围标识：切换参数表单（矩形/圆形）
+         * 17. 新建空白地图（不刷新页面）
+         */
+        function createNewMap() {
+            // 1. 输入地图名称
+            const mapName = prompt('请输入新地图名称：', '');
+            if (!mapName || !mapName.trim()) return;
+            const name = mapName.trim();
+
+            // 2. 名称冲突检查
+            if (state.savedMaps.hasOwnProperty(name)) {
+                if (!confirm(`地图「${name}」已存在，是否覆盖创建？`)) return;
+            }
+
+            // 3. 重置 state
+            state.scale = 1;
+            state.mapSize = 2000;
+            state.offsetX = 0;
+            state.offsetY = 0;
+            state.notes = [];
+            state.rangeMarkers = [];
+            state.mapRelations = [];
+            state.unit = { name: '里', desc: '1里=500米' };
+            state.currentNoteId = null;
+            state.currentMapIndex = -1;
+            state.mapList = [];
+
+            // 4. 重置表单
+            document.getElementById('currentMapName').value = name;
+            document.getElementById('unitName').value = '里';
+            document.getElementById('unitDesc').value = '1里=500米';
+            unitDescDisplay.textContent = '1里=500米';
+            manualNoteName.value = '新坐标点';
+            manualNoteX.value = '1000';
+            manualNoteY.value = '1000';
+            manualNoteContent.value = '';
+            markerName.value = '新区域';
+
+            // 5. 关闭备注弹窗
+            noteBox.style.display = 'none';
+            state.isEditingNote = false;
+            toggleNoteEditMode(false);
+
+            // 6. 更新所有列表和渲染
+            updateAllLists();
+            renderMap();
+
+            showToast(`已创建空白地图「${name}」`);
+        }
+
+        /**
+         * 18. 范围标识：切换参数表单（矩形/圆形）
          */
         function toggleMarkerParams() {
             const type = document.getElementById('markerType').value;
