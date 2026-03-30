@@ -1,0 +1,22 @@
+{
+  "mapName": "世界地图",
+  "scale": 0.20000000000000015,
+  "mapSize": 2000,
+  "unit": {
+    "name": "里",
+    "desc": "1里=500米"
+  },
+  "notes": [
+    {
+      "id": "note_1774420694071",
+      "name": "789",
+      "x": 469,
+      "y": 323,
+      "content": "无备注"
+    }
+  ],
+  "rangeMarkers": [],
+  "mapRelations": [],
+  "createTime": "2026/3/27 14:28:03",
+  "lastSaved": "2026/3/27 14:28:03"
+}

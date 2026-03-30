@@ -1,0 +1,71 @@
+{
+  "mapId": "深水秘境",
+  "currentVersion": 3,
+  "versions": [
+    {
+      "v": 1,
+      "chapter": 3,
+      "label": "水月宫入侵秘境",
+      "delta": {
+        "add": [
+          {
+            "id": "note_002",
+            "name": "沉渊入口",
+            "x": 420,
+            "y": 510,
+            "content": "水月宫打通的秘境入口",
+            "faction": "fac_002"
+          }
+        ],
+        "update": [],
+        "remove": []
+      }
+    },
+    {
+      "v": 2,
+      "chapter": 7,
+      "label": "散修盟争夺龙王祭坛",
+      "delta": {
+        "add": [
+          {
+            "id": "note_003",
+            "name": "散修营地",
+            "x": 580,
+            "y": 720,
+            "content": "散修盟临时据点",
+            "faction": "fac_003"
+          }
+        ],
+        "update": [
+          {
+            "id": "note_001",
+            "faction": "fac_003",
+            "content": "三方混战后被散修盟暂时控制"
+          }
+        ],
+        "remove": []
+      }
+    },
+    {
+      "v": 3,
+      "chapter": 10,
+      "label": "蛟龙族反攻",
+      "delta": {
+        "add": [],
+        "update": [
+          {
+            "id": "note_001",
+            "faction": "fac_001",
+            "content": "蛟龙族夺回圣地"
+          },
+          {
+            "id": "note_002",
+            "faction": "fac_001",
+            "content": "入口被蛟龙族封锁"
+          }
+        ],
+        "remove": ["note_003"]
+      }
+    }
+  ]
+}
