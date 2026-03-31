@@ -89,34 +89,6 @@
         }
 
         /**
-         * 8. 导出所有地图元素为一个整合文件
-         */
-        function exportAllMaps() {
-            if (Object.keys(state.savedMaps).length === 0) {
-                alert('暂无保存的地图数据！');
-                return;
-            }
-            
-            const allMapsData = {
-                exportTime: new Date().toLocaleString(),
-                mapCount: Object.keys(state.savedMaps).length,
-                maps: state.savedMaps
-            };
-            
-            const fileName = `所有地图元素.json`;
-            
-            if (state.workDirHandle) {
-                saveToDir(allMapsData, fileName).then(ok => {
-                    if (ok) showToast(`已导出到目录：${fileName}`);
-                    else fallbackDownload(allMapsData, fileName);
-                });
-            } else {
-                fallbackDownload(allMapsData, fileName);
-            }
-            alert(`已导出${Object.keys(state.savedMaps).length}个地图的所有元素！`);
-        }
-
-        /**
          * 9. 加载已保存的地图元素
          */
         function loadSavedMap(mapName) {
@@ -206,140 +178,7 @@
         }
 
         /**
-         * 13. JSON读取地图
-         */
-        function loadMap(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    autoSaveCurrentMap(); // 读取文件前自动保存当前地图
-                    const jsonData = JSON.parse(event.target.result);
-                    // 校验核心字段
-                    const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
-                    const missingFields = requiredFields.filter(field => !jsonData.hasOwnProperty(field));
-                    if (missingFields.length > 0) {
-                        throw new Error(`JSON文件缺失核心字段：${missingFields.join(',')}`);
-                    }
-                    
-                    // 保存到已保存地图列表
-                    const mapName = jsonData.mapName || '未命名地图';
-                    state.savedMaps[mapName] = jsonData;
-                    
-                    // 更新全局状态
-                    state.scale = Math.max(0.1, Math.min(2, jsonData.scale));
-                    state.mapSize = jsonData.mapSize || 2000;
-                    state.offsetX = 0;
-                    state.offsetY = 0;
-                    state.notes = jsonData.notes || [];
-                    state.rangeMarkers = jsonData.rangeMarkers || [];
-                    state.geoMarkers = migrateGeoData(jsonData);
-                    state.mapRelations = jsonData.mapRelations || [];
-                    state.unit = jsonData.unit || { name: '里', desc: '1里=500米' };
-                    
-                    // 更新页面显示
-                    document.getElementById('currentMapName').value = mapName;
-                    document.getElementById('unitName').value = state.unit.name;
-                    document.getElementById('unitDesc').value = state.unit.desc;
-                    unitDescDisplay.textContent = state.unit.desc;
-                    
-                    updateAllLists();
-                    updateSavedMapsList();
-                    renderMap();
-                    
-                    alert(`已读取并保存【${mapName}】地图数据！`);
-                } catch (error) {
-                    alert(`地图读取失败：${error.message}`);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        /**
-         * 14. 批量导入地图（可选）
-         */
-        function batchLoadMaps(e) {
-            const files = e.target.files;
-            if (files.length === 0) return;
-            state.mapList = [];
-            state.currentMapIndex = -1;
-            
-            let loadedCount = 0;
-            
-            // 读取所有选中的JSON文件
-            Array.from(files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        const jsonData = JSON.parse(event.target.result);
-                        // 校验核心字段
-                        const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
-                        const missingFields = requiredFields.filter(field => !jsonData.hasOwnProperty(field));
-                        if (missingFields.length > 0) throw new Error(`缺失字段：${missingFields.join(',')}`);
-                        
-                        const mapName = jsonData.mapName || file.name.replace('.json', '');
-                        
-                        // 添加到地图列表
-                        state.mapList.push({
-                            fileName: file.name,
-                            mapName: mapName,
-                            data: jsonData
-                        });
-                        
-                        // 保存到已保存地图列表
-                        state.savedMaps[mapName] = jsonData;
-                        
-                        loadedCount++;
-                        
-                        // 更新地图列表显示
-                        updateMapList();
-                        updateSavedMapsList();
-                        
-                        if (loadedCount === files.length) {
-                            alert(`成功导入${loadedCount}个地图文件！`);
-                        }
-                    } catch (error) {
-                        alert(`文件${file.name}解析失败：${error.message}`);
-                    }
-                };
-                reader.readAsText(file);
-            });
-        }
-
-        /**
-         * 15. 切换地图（批量导入后）
-         */
-        function switchMap(index) {
-            if (index < 0 || index >= state.mapList.length) return;
-            
-            const mapData = state.mapList[index].data;
-            const mapName = state.mapList[index].mapName;
-            
-            // 更新全局状态
-            state.scale = Math.max(0.1, Math.min(2, mapData.scale));
-            state.mapSize = mapData.mapSize || 2000;
-            state.offsetX = 0;
-            state.offsetY = 0;
-            state.notes = mapData.notes || [];
-            state.rangeMarkers = mapData.rangeMarkers || [];
-            state.geoMarkers = migrateGeoData(mapData);
-            state.mapRelations = mapData.mapRelations || [];
-            state.unit = mapData.unit || { name: '里', desc: '1里=500米' };
-            state.currentMapIndex = index;
-            
-            // 更新页面显示
-            document.getElementById('currentMapName').value = mapName;
-            document.getElementById('unitName').value = state.unit.name;
-            document.getElementById('unitDesc').value = state.unit.desc;
-            unitDescDisplay.textContent = state.unit.desc;
-            
-            updateAllLists();
-            updateMapList(); // 更新选中状态
-            renderMap();
-        }
-                /**
-         * 16. 清空所有数据
+         * 13. 清空所有数据
          */
         function clearAllData() {
             if (confirm('确定要清空所有数据吗？此操作不可恢复！')) {
@@ -353,8 +192,6 @@
                 state.mapRelations = [];
                 state.unit = { name: '里', desc: '1里=500米' };
                 state.currentNoteId = null;
-                state.currentMapIndex = -1;
-                state.mapList = [];
                 
                 // 询问是否同时删除已保存的地图
                 if (confirm('是否同时删除所有已保存的地图数据？')) {
@@ -427,8 +264,6 @@
             state.mapRelations = [];
             state.unit = { name: '里', desc: '1里=500米' };
             state.currentNoteId = null;
-            state.currentMapIndex = -1;
-            state.mapList = [];
 
             // 4. 重置表单
             document.getElementById('currentMapName').value = name;

@@ -48,32 +48,12 @@
         }
 
         /**
-         * 更新地图列表（批量导入）- 带选中样式
-         */
-        function updateMapList() {
-            if (state.mapList.length === 0) {
-                mapList.style.display = 'none';
-                return;
-            }
-            mapList.style.display = 'block';
-            mapListContent.innerHTML = '';
-            state.mapList.forEach((map, index) => {
-                const item = document.createElement('div');
-                item.className = `map-list-item ${index === state.currentMapIndex ? 'active' : ''}`;
-                item.textContent = map.mapName;
-                item.addEventListener('click', () => switchMap(index));
-                mapListContent.appendChild(item);
-            });
-        }
-
-        /**
          * 批量更新所有列表
          */
         function updateAllLists() {
             updateNoteList();
             updateGeoList();
             updateRelationList();
-            updateMapList();
         }
 
         // ==================== 全局函数暴露（供HTML调用） ====================
@@ -85,7 +65,6 @@
         window.deleteRelation = deleteRelation;
         window.loadSavedMap = loadSavedMap;
         window.deleteSavedMap = deleteSavedMap;
-        window.switchMap = switchMap;
 
         // ==================== 启动工具 ====================
         init();

@@ -239,38 +239,7 @@
             box-shadow: 0 1px 5px rgba(0,0,0,0.1);
             z-index: 90;
         }
-        /* 批量导入地图列表 */
-        .map-list {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: white;
-            width: 200px;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-            z-index: 90;
-        }
-        .map-list-title {
-            padding: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            background: #3498db;
-            color: white;
-        }
-        .map-list-item {
-            padding: 8px 10px;
-            font-size: 13px;
-            cursor: pointer;
-            border-bottom: 1px solid #f1f1f1;
-        }
-        .map-list-item:hover {
-            background: #f9f9f9;
-        }
-        .map-list-item.active {
-            background: #3498db;
-            color: white;
-        }
+
         /* 已保存地图列表 */
         .saved-maps-list {
             margin-top: 10px;
@@ -329,13 +298,9 @@
                 </div>
                 <button class="btn btn-success" id="newMapBtn">📄 新建地图</button>
                 <button class="btn" id="saveBtn">💾 保存地图</button>
-                <button class="btn btn-secondary" id="exportAllBtn">📦 导出所有地图</button>
-                <input type="file" id="loadFile" accept=".json" style="display: none;">
-                <button class="btn" id="loadBtn">读取地图（JSON）</button>
+
                 <button class="btn btn-danger" id="clearBtn">清空所有数据</button>
-                <!-- 批量导入（可选） -->
-                <input type="file" id="batchLoadFile" accept=".json" multiple style="display: none;">
-                <button class="btn" id="batchLoadBtn">批量导入地图（可选）</button>
+
                 
                 <!-- 已保存地图列表 -->
                 <div class="form-group" style="margin-top: 15px;">
@@ -586,11 +551,7 @@
             </div>
             <!-- 单位说明 -->
             <div class="unit-desc" id="unitDescDisplay">1里=500米</div>
-            <!-- 地图列表（批量导入） -->
-            <div class="map-list" id="mapList" style="display: none;">
-                <div class="map-list-title">已导入地图</div>
-                <div id="mapListContent"></div>
-            </div>
+
         </div>
     </div>
         <script src="js/state.js"></script>
@@ -606,7 +567,5 @@
         <script src="js/maps.js"></script>
         <script src="js/operations.js"></script>
         <script src="js/ui.js"></script>
-</body>
-</html>ipt>
 </body>
 </html>

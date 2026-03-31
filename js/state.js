@@ -12,9 +12,6 @@
             mapRelations: [], // 地图关联列表：[{id, currentMapName, currentXY, targetMapName, targetXY}]
             unit: { name: '里', desc: '1里=500米' }, // 量化单位
             currentNoteId: null, // 当前激活的坐标点ID
-            currentMapIndex: -1, // 当前选中的地图索引
-            currentMap: null, // 当前显示的地图（批量导入时）
-            mapList: [], // 导入的地图列表（批量导入时）
             savedMaps: {}, // 保存的地图数据（键：地图名称，值：完整地图数据）
             workDirHandle: null, // File System Access API 目录句柄
             // 拖拽状态
@@ -45,8 +42,6 @@
         const cancelNoteBtn = document.getElementById('cancelNoteBtn');
         const deleteNoteBtn = document.getElementById('deleteNoteBtn');
         const unitDescDisplay = document.getElementById('unitDescDisplay');
-        const mapList = document.getElementById('mapList');
-        const mapListContent = document.getElementById('mapListContent');
         const savedMapsList = document.getElementById('savedMapsList');
         // 手动添加坐标点元素
         const manualNoteName = document.getElementById('manualNoteName');
@@ -66,8 +61,6 @@
         const geoBold = document.getElementById('geoBold');
         const addGeoBtn = document.getElementById('addGeoBtn');
         const geoListEl = document.getElementById('geoList');
-        // 保存按钮
-        const exportAllBtn = document.getElementById('exportAllBtn');
         // 工作目录
         const selectDirBtn = document.getElementById('selectDirBtn');
         const dirStatus = document.getElementById('dirStatus');

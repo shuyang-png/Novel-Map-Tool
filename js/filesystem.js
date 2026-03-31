@@ -13,8 +13,6 @@
                 await saveDirHandle(handle);
                 // 清空旧目录相关数据
                 state.savedMaps = {};
-                state.mapList = [];
-                state.currentMapIndex = -1;
                 state.notes = [];
                 state.rangeMarkers = [];
                 state.geoMarkers = [];
@@ -26,7 +24,6 @@
                 document.getElementById('unitName').value = '里';
                 document.getElementById('unitDesc').value = '1里=500米';
                 unitDescDisplay.textContent = '1里=500米';
-                mapList.style.display = 'none';
                 updateAllLists();
                 updateSavedMapsList();
                 renderMap();

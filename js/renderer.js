@@ -45,12 +45,7 @@
             document.addEventListener('click', handleDocumentClick);
             // 5. 功能按钮事件
             document.getElementById('saveBtn').addEventListener('click', saveCurrentMap);
-            document.getElementById('exportAllBtn').addEventListener('click', exportAllMaps);
-            document.getElementById('loadBtn').addEventListener('click', () => document.getElementById('loadFile').click());
-            document.getElementById('loadFile').addEventListener('change', loadMap);
             document.getElementById('clearBtn').addEventListener('click', clearAllData);
-            document.getElementById('batchLoadBtn').addEventListener('click', () => document.getElementById('batchLoadFile').click());
-            document.getElementById('batchLoadFile').addEventListener('change', batchLoadMaps);
             // 手动添加坐标点
             addManualNoteBtn.addEventListener('click', addManualNote);
             // 地理标识
