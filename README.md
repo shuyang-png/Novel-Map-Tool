@@ -129,7 +129,6 @@
 
 - 纯 HTML + CSS + JavaScript
 - Canvas 2D 渲染
-- FileSaver.js（CDN 引入，JSON 下载降级方案）
 - File System Access API（Chrome/Edge 86+，工作目录直读直写）
 - IndexedDB（持久化目录句柄）
 
