@@ -93,11 +93,49 @@ find <工作目录> -name "*.json" | head -20
   "name": "凌霄城",
   "x": 900, "y": 900,
   "width": 200, "height": 200,
+  "metrics": { "area": 40000, "areaDesc": "约4万平方里" },
   "style": {
     "strokeColor": "#c0392b", "lineWidth": 4, "lineDash": null,
     "fillColor": "rgba(192,57,43,0.1)", "bold": true, "symbol": "towers"
   }
 }
+```
+
+### 折线宽度（河流/山脉等）
+
+`style.lineWidth` 是渲染像素，不是世界宽度。对河流、山脉等有实际宽度的特征，使用以下字段：
+
+- `geoWidth` — 地图单位宽度（整数），如 `"geoWidth": 8` 表示最宽 8 里
+- `geoWidthDesc` — 可读描述，如 `"最宽处8里约4千米"`
+
+对于极宽的河流/山脉（宽度 > 50% 地图宽度），改用 `polygon` 画两道平行边填充。
+
+### 面积与长度预计算
+
+每个 geoMarker 都应包含 `metrics` 字段，供作者行文参考：
+
+| type | metrics 字段 | 计算方式 |
+|------|-------------|---------|
+| polyline | `length`, `lengthDesc` | 各段欧氏距离之和 |
+| rect | `area`, `areaDesc` | `width × height` |
+| ellipse | `area`, `areaDesc` | `π × rx × ry` |
+| polygon | `area`, `areaDesc` | 鞋带公式 |
+| pin | 无需 | — |
+
+**计算示例：**
+
+折线 `[(200,100), (500,300), (800,250)]` 的长度：
+```
+段1: √((500-200)² + (300-100)²) = √(90000+40000) ≈ 361
+段2: √((800-500)² + (250-300)²) = √(90000+2500) ≈ 304
+总长: 361 + 304 = 665 里
+→ metrics: { "length": 665, "lengthDesc": "约665里" }
+```
+
+矩形 `x=500, y=1200, w=400, h=300` 的面积：
+```
+面积: 400 × 300 = 120000 平方里
+→ metrics: { "area": 120000, "areaDesc": "约12万平方里" }
 ```
 
 ## 编辑规则

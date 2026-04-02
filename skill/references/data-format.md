@@ -43,6 +43,9 @@
   "presetType": "河流",
   "type": "polyline",
   "name": "青龙河",
+  "geoWidth": 8,
+  "geoWidthDesc": "最宽处8里约4千米",
+  "metrics": { "length": 665, "lengthDesc": "约665里" },
   "style": {
     "strokeColor": "#5dade2",
     "lineWidth": 3,
@@ -53,6 +56,12 @@
   }
 }
 ```
+
+- `geoWidth` / `geoWidthDesc`（可选）：polyline 专用，地图单位宽度
+- `metrics`（可选）：预计算的面积/长度，供作者参考
+  - polyline → `{ length, lengthDesc }`
+  - rect/polygon/ellipse → `{ area, areaDesc }`
+  - pin → 不需要
 
 ### 按 type 区分的坐标字段
 
