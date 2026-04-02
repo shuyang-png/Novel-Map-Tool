@@ -151,6 +151,7 @@
                 geo.y = parseInt(document.getElementById('geoPinY').value) || 0;
             }
 
+            calcGeoMetrics(geo);
             state.geoMarkers.push(geo);
 
             // 清空表单

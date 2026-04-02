@@ -138,5 +138,37 @@
         }
 
         /**
+         * 自动计算 geoMarker 的 metrics（长度/面积）
+         */
+        function calcGeoMetrics(geo) {
+            const unitName = (typeof state !== 'undefined' && state.unit && state.unit.name) ? state.unit.name : '里';
+            const fmt = n => n >= 10000 ? `约${Math.round(n / 1000) / 10}万` : `约${n}`;
+
+            if (geo.type === 'polyline' && geo.points && geo.points.length >= 2) {
+                let total = 0;
+                for (let i = 1; i < geo.points.length; i++) {
+                    const dx = geo.points[i].x - geo.points[i-1].x;
+                    const dy = geo.points[i].y - geo.points[i-1].y;
+                    total += Math.sqrt(dx*dx + dy*dy);
+                }
+                geo.metrics = { length: Math.round(total), lengthDesc: `${fmt(Math.round(total))}${unitName}` };
+            } else if (geo.type === 'rect') {
+                const area = (geo.width || 0) * (geo.height || 0);
+                if (area > 0) geo.metrics = { area, areaDesc: `${fmt(area)}平方${unitName}` };
+            } else if (geo.type === 'ellipse') {
+                const area = Math.round(Math.PI * (geo.rx || 0) * (geo.ry || 0));
+                if (area > 0) geo.metrics = { area, areaDesc: `${fmt(area)}平方${unitName}` };
+            } else if (geo.type === 'polygon' && geo.points && geo.points.length >= 3) {
+                let area = 0;
+                for (let i = 0, j = geo.points.length - 1; i < geo.points.length; j = i++) {
+                    area += geo.points[j].x * geo.points[i].y;
+                    area -= geo.points[i].x * geo.points[j].y;
+                }
+                area = Math.round(Math.abs(area / 2));
+                if (area > 0) geo.metrics = { area, areaDesc: `${fmt(area)}平方${unitName}` };
+            }
+        }
+
+        /**
          * 沿线绘制方向箭头（河流符号）
          */

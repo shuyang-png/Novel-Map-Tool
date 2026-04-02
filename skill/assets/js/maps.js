@@ -128,6 +128,7 @@
             state.notes = mapData.notes || [];
             state.rangeMarkers = mapData.rangeMarkers || [];
             state.geoMarkers = migrateGeoData(mapData);
+            state.geoMarkers.forEach(g => { if (!g.metrics) calcGeoMetrics(g); });
             state.mapRelations = mapData.mapRelations || [];
             state.unit = mapData.unit || { name: '里', desc: '1里=500米' };
             

@@ -151,6 +151,7 @@
                 geo.y = parseInt(document.getElementById('geoPinY').value) || 0;
             }
 
+            calcGeoMetrics(geo);
             state.geoMarkers.push(geo);
 
             // 清空表单
@@ -263,10 +264,18 @@
                 } else if (geo.center) {
                     ptsInfo = `圆心(${geo.center.x},${geo.center.y}) r=${geo.radius}`;
                 }
+                // metrics 显示
+                const m = geo.metrics;
+                let metricsInfo = '';
+                if (m) {
+                    if (m.lengthDesc) metricsInfo = m.lengthDesc;
+                    if (m.areaDesc) metricsInfo = m.areaDesc;
+                }
+                if (geo.geoWidthDesc) metricsInfo = (metricsInfo ? metricsInfo + ' · ' : '') + geo.geoWidthDesc;
                 item.innerHTML = `
                     <div style="flex:1;">
                         <div style="font-weight:600;">${geo.name}（${typeLabel}·${presetLabel}）</div>
-                        <div style="font-size:12px; color:#666;">${ptsInfo}</div>
+                        <div style="font-size:12px; color:#666;">${ptsInfo}${metricsInfo ? ' · ' + metricsInfo : ''}</div>
                     </div>
                     <div>
                         <button class="list-btn" onclick="editGeoMarker('${geo.id}')">编辑</button>

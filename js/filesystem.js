@@ -162,6 +162,7 @@
             state.notes = data.notes || [];
             state.rangeMarkers = data.rangeMarkers || [];
             state.geoMarkers = migrateGeoData(data);
+            state.geoMarkers.forEach(g => { if (!g.metrics) calcGeoMetrics(g); });
             state.mapRelations = data.mapRelations || [];
             state.unit = data.unit || { name: '里', desc: '1里=500米' };
             state.savedMaps[mapName] = data;
