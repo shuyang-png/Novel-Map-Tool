@@ -24,8 +24,10 @@
             // 备注编辑状态
             isEditingNote: false,
             originalNoteContent: '',
-            // pin点击放置模式
-            geoPinPlacementMode: false
+            // 版本管理
+            versions: null,           // 当前加载的版本文件 {mapId, currentVersion, versions:[]}
+            viewingVersion: null,     // 正在查看的版本号（null = 最新）
+            _latestState: null        // 进入版本查看时保存的最新状态快照
         };
 
         // ==================== DOM元素获取 ====================

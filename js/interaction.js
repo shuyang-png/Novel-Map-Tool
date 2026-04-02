@@ -27,12 +27,15 @@
         function handleMouseMove(e) {
             if (!state.isDragging) return;
             
-            // 标记发生了拖拽移动
-            state.dragMoved = true;
-            
             // 计算偏移差值
             const deltaX = e.clientX - state.dragStartX;
             const deltaY = e.clientY - state.dragStartY;
+            
+            // 只有移动超过 5px 才算拖拽（避免微小偏移误触发）
+            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+                state.dragMoved = true;
+            }
+            
             // 更新偏移量（基于当前缩放比例调整拖拽速度）
             let newOffsetX = state.lastOffsetX + deltaX / state.scale;
             let newOffsetY = state.lastOffsetY + deltaY / state.scale;
@@ -61,23 +64,16 @@
         function handleCanvasClick(e) {
             // 如果发生了拖拽移动，则不触发添加坐标点
             if (state.dragMoved) return;
-            
-            // 计算点击位置在地图上的原始坐标（反向应用缩放和偏移）
-            const rect = canvas.getBoundingClientRect();
-            const clickX = (e.clientX - rect.left - canvas.width / 2) / state.scale + canvas.width / 2 - state.offsetX;
-            const clickY = (e.clientY - rect.top - canvas.height / 2) / state.scale + canvas.height / 2 - state.offsetY;
-            
-            // 限制坐标在0~2000范围内
-            const x = Math.max(0, Math.min(state.mapSize, Math.round(clickX)));
-            const y = Math.max(0, Math.min(state.mapSize, Math.round(clickY)));
 
-            // pin 点击放置模式：填入坐标并退出
-            if (state.geoPinPlacementMode) {
-                document.getElementById('geoPinX').value = x;
-                document.getElementById('geoPinY').value = y;
-                toggleGeoPinPlacement(); // 退出放置模式
-                return;
-            }
+            // 非最新版本禁止编辑
+            if (state.viewingVersion !== null) return;
+
+            // 计算点击位置在地图上的原始坐标
+            const rect2 = canvas.getBoundingClientRect();
+            const clickX2 = (e.clientX - rect2.left - canvas.width / 2) / state.scale + canvas.width / 2 - state.offsetX;
+            const clickY2 = (e.clientY - rect2.top - canvas.height / 2) / state.scale + canvas.height / 2 - state.offsetY;
+            const x = Math.max(0, Math.min(state.mapSize, Math.round(clickX2)));
+            const y = Math.max(0, Math.min(state.mapSize, Math.round(clickY2)));
 
             // 输入坐标点名称
             const name = prompt('请输入坐标点名称：', '');
@@ -110,6 +106,11 @@
          * 5. 手动添加坐标点（通过输入坐标）
          */
         function addManualNote() {
+            // 非最新版本禁止编辑
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法编辑！请先回到最新版本。');
+                return;
+            }
             const name = manualNoteName.value.trim();
             const x = parseInt(manualNoteX.value);
             const y = parseInt(manualNoteY.value);

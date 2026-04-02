@@ -1,5 +1,9 @@
 // 地图保存/加载/导出/管理
         function saveElementsToFile() {
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法保存！请先回到最新版本。');
+                return;
+            }
             const currentMapName = document.getElementById('currentMapName').value.trim();
             if (!currentMapName) {
                 alert('请先输入当前地图名称！');
@@ -45,6 +49,10 @@
          * 7. 保存当前地图（新建文件）
          */
         function saveCurrentMap() {
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法保存！请先回到最新版本。');
+                return;
+            }
             const currentMapName = document.getElementById('currentMapName').value.trim() || '未命名地图';
             
             const mapData = {
@@ -56,6 +64,7 @@
                 rangeMarkers: [], // 已合并到geoMarkers，保留空数组兼容旧版本
                 geoMarkers: [...state.geoMarkers],
                 mapRelations: [...state.mapRelations],
+                currentVersion: state.versions ? state.versions.currentVersion : 0,
                 createTime: new Date().toLocaleString(),
                 lastSaved: new Date().toLocaleString()
             };
@@ -69,6 +78,10 @@
                     if (ok) showToast(`已保存到目录：${fileName}`);
                     else { fallbackDownload(mapData, fileName); }
                 });
+                // 同步保存版本文件
+                if (state.versions) {
+                    saveVersionsFile(currentMapName, state.versions);
+                }
             } else {
                 fallbackDownload(mapData, fileName);
             }
@@ -100,6 +113,13 @@
             
             const mapData = state.savedMaps[mapName];
             
+            // 退出版本查看模式
+            if (state.viewingVersion !== null) exitVersionView();
+            state.versions = null; // 内存加载不带版本文件，需从目录重新加载
+            state.viewingVersion = null;
+            hideVersionBanner();
+            setEditingDisabled(false);
+            
             // 更新全局状态
             state.scale = Math.max(0.1, Math.min(2, mapData.scale));
             state.mapSize = mapData.mapSize || 2000;
@@ -117,7 +137,16 @@
             document.getElementById('unitDesc').value = state.unit.desc;
             unitDescDisplay.textContent = state.unit.desc;
             
+            // 尝试从工作目录加载版本文件
+            if (state.workDirHandle) {
+                loadVersionsFile(mapName).then(vf => {
+                    state.versions = vf;
+                    updateVersionTimeline();
+                });
+            }
+            
             updateAllLists();
+            updateVersionTimeline();
             renderMap();
             
             alert(`已加载【${mapName}】地图的所有元素！`);
@@ -182,6 +211,13 @@
          */
         function clearAllData() {
             if (confirm('确定要清空所有数据吗？此操作不可恢复！')) {
+                // 退出版本查看模式
+                if (state.viewingVersion !== null) exitVersionView();
+                state.versions = null;
+                state.viewingVersion = null;
+                hideVersionBanner();
+                setEditingDisabled(false);
+                
                 state.scale = 1;
                 state.mapSize = 2000;
                 state.offsetX = 0;
@@ -210,6 +246,7 @@
                 
                 updateAllLists();
                 updateSavedMapsList();
+                updateVersionTimeline();
                 renderMap();
             }
         }
@@ -253,6 +290,13 @@
             // 2.5 自动保存当前地图草稿（防止丢失）
             autoSaveCurrentMap();
 
+            // 2.6 退出版本查看模式
+            if (state.viewingVersion !== null) exitVersionView();
+            state.versions = null;
+            state.viewingVersion = null;
+            hideVersionBanner();
+            setEditingDisabled(false);
+
             // 3. 重置 state
             state.scale = 1;
             state.mapSize = 2000;
@@ -282,6 +326,7 @@
 
             // 6. 更新所有列表和渲染
             updateAllLists();
+            updateVersionTimeline();
             renderMap();
 
             // 7. 自动保存新创建的空白地图

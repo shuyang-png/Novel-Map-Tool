@@ -31,7 +31,10 @@
                 dirStatus.style.color = '#2e7d32';
                 await listMapFiles();
             } catch (e) {
-                if (e.name !== 'AbortError') console.error('选择目录失败:', e);
+                if (e.name !== 'AbortError') {
+                    console.error('选择目录失败:', e);
+                    alert('选择目录失败：' + e.message + '\n\n请确认使用 Chrome 86+ 或 Edge 86+ 浏览器。');
+                }
             }
         }
 
@@ -101,7 +104,14 @@
                 const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
                 const missing = requiredFields.filter(f => !jsonData.hasOwnProperty(f));
                 if (missing.length > 0) throw new Error(`缺失字段：${missing.join(',')}`);
-                applyMapData(jsonData, jsonData.mapName || fileName.replace('.json', ''));
+                const mapName = jsonData.mapName || fileName.replace('.json', '');
+                applyMapData(jsonData, mapName);
+                // 加载版本文件
+                state.versions = await loadVersionsFile(mapName);
+                state.viewingVersion = null;
+                hideVersionBanner();
+                setEditingDisabled(false);
+                updateVersionTimeline();
                 showToast(`已加载：${fileName}`);
             } catch (e) {
                 alert(`加载失败：${e.message}`);
@@ -141,6 +151,8 @@
         // 统一应用地图数据到 state 和 UI
         function applyMapData(data, mapName) {
             autoSaveCurrentMap(); // 加载前自动保存当前地图
+            // 退出版本查看模式
+            if (state.viewingVersion !== null) exitVersionView();
             state.scale = Math.max(0.1, Math.min(2, data.scale));
             state.mapSize = data.mapSize || 2000;
             state.offsetX = 0;

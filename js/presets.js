@@ -70,29 +70,13 @@
         }
 
         /**
-         * 切换 pin 点击地图放置模式
-         */
-        function toggleGeoPinPlacement() {
-            state.geoPinPlacementMode = !state.geoPinPlacementMode;
-            const hint = document.getElementById('geoPinClickHint');
-            const btn = document.getElementById('geoPinClickBtn');
-            if (state.geoPinPlacementMode) {
-                hint.style.display = 'block';
-                btn.textContent = '❌ 取消放置';
-                btn.style.background = '#dc3545';
-                canvas.style.cursor = 'crosshair';
-            } else {
-                hint.style.display = 'none';
-                btn.textContent = '📌 点击地图放置';
-                btn.style.background = '#17a2b8';
-                canvas.style.cursor = 'default';
-            }
-        }
-
-        /**
          * 添加地理标识
          */
         function addGeoMarker() {
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法编辑！请先回到最新版本。');
+                return;
+            }
             const name = geoName.value.trim();
             const shape = document.getElementById('geoShape').value;
             const presetType = document.getElementById('geoPresetType').value || '通用';
@@ -246,6 +230,10 @@
          * 删除地理标识
          */
         function deleteGeoMarker(geoId) {
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法编辑！请先回到最新版本。');
+                return;
+            }
             state.geoMarkers = state.geoMarkers.filter(g => g.id !== geoId);
             updateGeoList();
             renderMap();

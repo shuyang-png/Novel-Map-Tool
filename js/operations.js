@@ -1,5 +1,9 @@
 // 地图关联 + 备注编辑
         function addMapRelation() {
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法编辑！请先回到最新版本。');
+                return;
+            }
             const currentMapName = document.getElementById('currentMapName').value.trim();
             const targetMapName = document.getElementById('targetMapName').value.trim();
             const currentMapXY = document.getElementById('currentMapXY').value.trim();
@@ -99,6 +103,10 @@
          * 23. 地图关联：删除关联
          */
         function deleteRelation(relationId) {
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法编辑！请先回到最新版本。');
+                return;
+            }
             // 删除当前地图中的关联
             const deletedRelation = state.mapRelations.find(r => r.id === relationId);
             state.mapRelations = state.mapRelations.filter(r => r.id !== relationId);
@@ -200,6 +208,10 @@
          */
         function deleteNote(noteId) {
             if (!noteId) return;
+            if (state.viewingVersion !== null) {
+                alert('当前正在查看历史版本，无法编辑！请先回到最新版本。');
+                return;
+            }
             
             if (confirm('确定要删除此坐标点吗？')) {
                 state.notes = state.notes.filter(n => n.id !== noteId);

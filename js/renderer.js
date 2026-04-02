@@ -55,7 +55,6 @@
             });
             document.getElementById('geoPresetType').addEventListener('change', applyPreset);
             addGeoBtn.addEventListener('click', addGeoMarker);
-            document.getElementById('geoPinClickBtn').addEventListener('click', toggleGeoPinPlacement);
             geoStrokeColor.addEventListener('input', () => { geoStrokeColorText.value = geoStrokeColor.value; });
             geoStrokeColorText.addEventListener('input', () => { geoStrokeColor.value = geoStrokeColorText.value; });
             geoFillColor.addEventListener('input', () => { geoFillColorText.value = geoFillColor.value; });
