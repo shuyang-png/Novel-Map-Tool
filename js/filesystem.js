@@ -159,7 +159,13 @@
             state.mapSize = data.mapSize || 2000;
             state.offsetX = 0;
             state.offsetY = 0;
-            state.notes = data.notes || [];
+            state.notes = (data.notes || []).map(n => ({
+                id: n.id || `note_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+                name: n.name || n.text || n.label || n.title || '未命名',
+                x: n.x || 0,
+                y: n.y || 0,
+                content: n.content || n.desc || n.description || '无备注'
+            }));
             state.rangeMarkers = data.rangeMarkers || [];
             state.geoMarkers = migrateGeoData(data);
             state.geoMarkers.forEach(g => { if (!g.metrics) calcGeoMetrics(g); });
