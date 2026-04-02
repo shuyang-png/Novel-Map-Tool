@@ -10,3 +10,5 @@
 !小说地图工具.html
 !js/
 !js/*.js
+!skill/
+!skill/**
