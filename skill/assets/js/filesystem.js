@@ -101,9 +101,11 @@
                 const text = await file.text();
                 const jsonData = JSON.parse(text);
                 // 校验核心字段
-                const requiredFields = ['scale', 'unit', 'notes', 'rangeMarkers', 'mapRelations'];
+                const requiredFields = ['scale', 'unit', 'notes', 'geoMarkers', 'mapRelations'];
                 const missing = requiredFields.filter(f => !jsonData.hasOwnProperty(f));
                 if (missing.length > 0) throw new Error(`缺失字段：${missing.join(',')}`);
+                // 兼容：rangeMarkers 可选，默认空数组
+                if (!jsonData.rangeMarkers) jsonData.rangeMarkers = [];
                 const mapName = jsonData.mapName || fileName.replace('.json', '');
                 applyMapData(jsonData, mapName);
                 // 加载版本文件

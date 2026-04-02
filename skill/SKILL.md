@@ -115,8 +115,8 @@ find <工作目录> -name "*.json" | head -20
 **使用脚本自动计算，不要手动算：**
 
 ```bash
-node skill/scripts/calc-metrics.js <地图.json>      # 预览结果
-node skill/scripts/calc-metrics.js <地图.json> -w   # 计算并写回 JSON
+node js/calc-metrics.js <地图.json>      # 预览结果
+node js/calc-metrics.js <地图.json> -w   # 计算并写回 JSON
 ```
 
 脚本自动为每个 geoMarker 填充 `metrics` 字段。每个 geoMarker 都应包含 `metrics`，供作者行文参考：
