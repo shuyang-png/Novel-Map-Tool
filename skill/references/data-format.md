@@ -12,6 +12,7 @@
   "unit": { "name": "里", "desc": "1里=500米" },
   "notes": [],
   "geoMarkers": [],
+  "rangeMarkers": [],
   "mapRelations": [],
   "versions": null
 }
