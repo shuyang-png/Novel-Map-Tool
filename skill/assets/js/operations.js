@@ -146,10 +146,11 @@
             const rect = canvas.getBoundingClientRect();
             const displayX = (note.x - state.offsetX) * state.scale + rect.left + canvas.width / 2 - state.mapSize * state.scale / 2;
             const displayY = (note.y - state.offsetY) * state.scale + rect.top + canvas.height / 2 - state.mapSize * state.scale / 2;
-            
-            // 设置备注框位置（避免超出可视区域）
-            noteBox.style.left = `${Math.min(displayX + 20, rect.right - 270)}px`;
-            noteBox.style.top = `${Math.min(displayY + 20, rect.bottom - 150)}px`;
+
+            // 限制备注框在Canvas可视范围内
+            const boxW = 260, boxH = 160;
+            noteBox.style.left = `${Math.max(rect.left, Math.min(displayX + 20, rect.right - boxW))}px`;
+            noteBox.style.top = `${Math.max(rect.top, Math.min(displayY + 20, rect.bottom - boxH))}px`;
             
             // 切换到查看模式
             toggleNoteEditMode(false);
