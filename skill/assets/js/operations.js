@@ -142,15 +142,20 @@
             noteContentTextarea.value = note.content;
             state.originalNoteContent = note.content;
             
-            // 计算备注框在页面上的位置（基于Canvas坐标和缩放偏移）
+            // 计算备注框位置（noteBox在map-container内，用相对坐标）
             const rect = canvas.getBoundingClientRect();
-            const displayX = (note.x - state.offsetX) * state.scale + rect.left + canvas.width / 2 - state.mapSize * state.scale / 2;
-            const displayY = (note.y - state.offsetY) * state.scale + rect.top + canvas.height / 2 - state.mapSize * state.scale / 2;
-
-            // 限制备注框在Canvas可视范围内
+            const containerRect = canvas.parentElement.getBoundingClientRect();
+            // note在canvas上的像素位置（相对canvas左上角）
+            const px = (note.x - state.offsetX) * state.scale + canvas.width / 2 - state.mapSize * state.scale / 2;
+            const py = (note.y - state.offsetY) * state.scale + canvas.height / 2 - state.mapSize * state.scale / 2;
+            // 转为相对map-container的坐标（canvas在container内有padding）
+            const cx = px + (rect.left - containerRect.left);
+            const cy = py + (rect.top - containerRect.top);
+            // 限制在container范围内
             const boxW = 260, boxH = 160;
-            noteBox.style.left = `${Math.max(rect.left, Math.min(displayX + 20, rect.right - boxW))}px`;
-            noteBox.style.top = `${Math.max(rect.top, Math.min(displayY + 20, rect.bottom - boxH))}px`;
+            const cw = containerRect.width, ch = containerRect.height;
+            noteBox.style.left = `${Math.max(0, Math.min(cx + 20, cw - boxW))}px`;
+            noteBox.style.top = `${Math.max(0, Math.min(cy + 20, ch - boxH))}px`;
             
             // 切换到查看模式
             toggleNoteEditMode(false);
