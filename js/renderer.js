@@ -217,7 +217,7 @@
 
                     // 名称显示在第一个顶点附近
                     if (geo.name) {
-                        drawMarkerName(geo.name, geo.points[0].x + 10, geo.points[0].y - 10);
+                        drawMarkerName(geo.name, geo.points[0].x + 10, geo.points[0].y - 10, geo.metrics);
                     }
                 } else if (geo.type === 'polygon' && geo.points && geo.points.length >= 3) {
                     // 多边形
@@ -282,7 +282,7 @@
                     if (geo.name) {
                         const cx = geo.points.reduce((s, p) => s + p.x, 0) / geo.points.length;
                         const cy = geo.points.reduce((s, p) => s + p.y, 0) / geo.points.length;
-                        drawMarkerName(geo.name, cx, cy);
+                        drawMarkerName(geo.name, cx, cy, geo.metrics);
                     }
                 } else if (geo.type === 'circle' && geo.center) {
                     // 圆形地理标识（向后兼容）
@@ -293,7 +293,7 @@
                     ctx.fill();
                     ctx.stroke();
                     if (geo.name) {
-                        drawMarkerName(geo.name, geo.center.x, geo.center.y + (geo.radius || 100) + 20);
+                        drawMarkerName(geo.name, geo.center.x, geo.center.y + (geo.radius || 100) + 20, geo.metrics);
                     }
                 } else if (geo.type === 'rect' && geo.x !== undefined) {
                     // 矩形
@@ -374,7 +374,7 @@
                     }
                     // 名称显示在矩形中心
                     if (geo.name) {
-                        drawMarkerName(geo.name, geo.x + geo.width / 2, geo.y + geo.height / 2);
+                        drawMarkerName(geo.name, geo.x + geo.width / 2, geo.y + geo.height / 2, geo.metrics);
                     }
                 } else if (geo.type === 'ellipse' && geo.cx !== undefined) {
                     // 椭圆
@@ -452,7 +452,7 @@
                     }
                     // 名称显示在椭圆中心
                     if (geo.name) {
-                        drawMarkerName(geo.name, geo.cx, geo.cy);
+                        drawMarkerName(geo.name, geo.cx, geo.cy, geo.metrics);
                     }
                 } else if (geo.type === 'pin' && geo.x !== undefined) {
                     // 标注点 — 使用Canvas几何符号绘制（不依赖字体/emoji）
@@ -536,14 +536,23 @@
         }
 
         /**
-         * 绘制范围标识名称
+         * 绘制范围标识名称 + metrics
          */
-        function drawMarkerName(name, x, y) {
+        function drawMarkerName(name, x, y, metrics) {
             ctx.fillStyle = '#2c3e50';
             ctx.font = `${14}px sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(name, x, y);
+            // 显示面积/长度
+            if (metrics) {
+                const m = metrics.lengthDesc || metrics.areaDesc;
+                if (m) {
+                    ctx.font = `${11}px sans-serif`;
+                    ctx.fillStyle = '#888';
+                    ctx.fillText(m, x, y + 16);
+                }
+            }
         }
 
         /**
