@@ -87,6 +87,13 @@
                     return;
                 }
                 
+                // 检查坐标是否已存在
+                const existing = state.notes.find(n => n.x === x && n.y === y);
+                if (existing) {
+                    alert(`坐标 (${x}, ${y}) 已存在坐标点「${existing.name}」，不可重复添加！`);
+                    return;
+                }
+                
                 // 添加新坐标点
                 const newNote = {
                     id: `note_${Date.now()}`,
@@ -134,6 +141,13 @@
             
             if (content.length > 200) {
                 alert('备注字数不能超过200字！');
+                return;
+            }
+            
+            // 检查坐标是否已存在
+            const existing = state.notes.find(n => n.x === x && n.y === y);
+            if (existing) {
+                alert(`坐标 (${x}, ${y}) 已存在坐标点「${existing.name}」，不可重复添加！`);
                 return;
             }
             
