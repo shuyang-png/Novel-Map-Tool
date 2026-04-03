@@ -133,8 +133,11 @@
             const note = state.notes.find(n => n.id === noteId);
             if (!note) return;
             
-            const targetOffsetX = note.x - state.mapSize / 2;
-            const targetOffsetY = note.y - state.mapSize / 2;
+            // 渲染变换推导（与 renderer.js 一致）:
+            // screenX = (wx - canvas.width/2 + offsetX) * scale + canvas.width/2
+            // 居中 → offsetX = canvas.width/2 - wx  (与 scale 无关)
+            const targetOffsetX = canvas.width / 2 - note.x;
+            const targetOffsetY = canvas.height / 2 - note.y;
             const startOffsetX = state.offsetX;
             const startOffsetY = state.offsetY;
             const startTime = performance.now();
