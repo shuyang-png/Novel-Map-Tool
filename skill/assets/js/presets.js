@@ -261,8 +261,10 @@
                     ptsInfo = `(${geo.x},${geo.y}) ${geo.width}×${geo.height}`;
                 } else if (geo.type === 'ellipse') {
                     ptsInfo = `(${geo.cx},${geo.cy}) rx=${geo.rx} ry=${geo.ry}`;
+                } else if (geo.type === 'pin') {
+                    ptsInfo = `(${geo.x},${geo.y})`;
                 } else if (geo.center) {
-                    ptsInfo = `圆心(${geo.center.x},${geo.center.y}) r=${geo.radius}`;
+                    ptsInfo = `心(${geo.center.x},${geo.center.y}) r=${geo.radius}`;
                 }
                 // metrics 显示
                 const m = geo.metrics;
@@ -272,12 +274,14 @@
                     if (m.areaDesc) metricsInfo = m.areaDesc;
                 }
                 if (geo.geoWidthDesc) metricsInfo = (metricsInfo ? metricsInfo + ' · ' : '') + geo.geoWidthDesc;
+                const ptsDisplay = ptsInfo ? ` <span style="color:#999;font-weight:normal;font-size:11px;">${ptsInfo}</span>` : '';
                 item.innerHTML = `
                     <div style="flex:1;">
-                        <div style="font-weight:600;">${geo.name}（${typeLabel}·${presetLabel}）</div>
-                        <div style="font-size:12px; color:#666;">${ptsInfo}${metricsInfo ? ' · ' + metricsInfo : ''}</div>
+                        <div style="font-weight:600;">${geo.name}${ptsDisplay}（${typeLabel}·${presetLabel}）</div>
+                        <div style="font-size:12px; color:#666;">${metricsInfo || ''}</div>
                     </div>
                     <div>
+                        <button class="list-btn" onclick="showGeoBox('${geo.id}')">定位</button>
                         <button class="list-btn" onclick="editGeoMarker('${geo.id}')">编辑</button>
                         <button class="list-btn btn-danger" onclick="deleteGeoMarker('${geo.id}')">删除</button>
                     </div>

@@ -239,6 +239,29 @@
             box-shadow: 0 1px 5px rgba(0,0,0,0.1);
             z-index: 90;
         }
+        /* 悬停标识弹窗 */
+        .hover-popup {
+            position: absolute;
+            display: none;
+            background: white;
+            border: 1px solid #2980b9;
+            border-radius: 6px;
+            padding: 6px 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 200;
+            pointer-events: none;
+            max-width: 220px;
+        }
+        .hover-name {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 13px;
+        }
+        .hover-detail {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+        }
 
         /* 已保存地图列表 */
         .saved-maps-list {
@@ -558,6 +581,11 @@
             </div>
             <!-- 单位说明 -->
             <div class="unit-desc" id="unitDescDisplay">1里=500米</div>
+            <!-- 悬停标识名称弹窗 -->
+            <div class="hover-popup" id="hoverPopup">
+                <div class="hover-name" id="hoverName"></div>
+                <div class="hover-detail" id="hoverDetail"></div>
+            </div>
 
         </div>
     </div>

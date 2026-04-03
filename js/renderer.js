@@ -38,7 +38,8 @@
             canvas.addEventListener('mousedown', handleMouseDown);
             canvas.addEventListener('mousemove', handleMouseMove);
             canvas.addEventListener('mouseup', handleMouseUp);
-            canvas.addEventListener('mouseleave', handleMouseUp);
+            canvas.addEventListener('mouseleave', function(e) { handleMouseUp(); hideHoverPopup(); });
+            canvas.addEventListener('mousemove', function(e) { handleHoverDetect(e); });
             // 3. 地图点击事件（添加坐标点）
             canvas.addEventListener('click', handleCanvasClick);
             // 4. 空白处点击关闭备注框
@@ -571,5 +572,132 @@
             ctx.closePath();
             ctx.fill();
             ctx.restore();
+        }
+
+        // ==================== 悬停检测 ====================
+        
+        /** 隐藏悬停名称框 */
+        function hideHoverPopup() {
+            const popup = document.getElementById('hoverPopup');
+            if (popup) popup.style.display = 'none';
+        }
+
+        /** 将 Canvas 坐标转换为世界坐标 */
+        function screenToWorld(screenX, screenY) {
+            const wx = (screenX - canvas.width / 2) / state.scale + canvas.width / 2 - state.offsetX;
+            const wy = (screenY - canvas.height / 2) / state.scale + canvas.height / 2 - state.offsetY;
+            return { wx, wy };
+        }
+
+        /** 检测点是否在多边形内 */
+        function isPointInPoly(px, py, points) {
+            let inside = false;
+            for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+                const xi = points[i].x, yi = points[i].y;
+                const xj = points[j].x, yj = points[j].y;
+                if (((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+            return inside;
+        }
+
+        /** 悬停检测 */
+        function handleHoverDetect(e) {
+            if (state.isDragging) return; // 拖拽时不检测
+            
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const { wx, wy } = screenToWorld(screenX, screenY);
+            
+            const popup = document.getElementById('hoverPopup');
+            const nameEl = document.getElementById('hoverName');
+            const detailEl = document.getElementById('hoverDetail');
+            if (!popup || !nameEl || !detailEl) return;
+            
+            let hit = null;
+            let hitName = '';
+            let hitDetail = '';
+            
+            // 1. 检测地理标识（从后往前，先渲染的优先级低）
+            for (let i = state.geoMarkers.length - 1; i >= 0; i--) {
+                const geo = state.geoMarkers[i];
+                let isHit = false;
+                
+                if (geo.type === 'rect') {
+                    isHit = wx >= geo.x && wx <= geo.x + geo.width && wy >= geo.y && wy <= geo.y + geo.height;
+                } else if (geo.type === 'ellipse') {
+                    const dx = (wx - geo.cx) / geo.rx;
+                    const dy = (wy - geo.cy) / geo.ry;
+                    isHit = (dx * dx + dy * dy) <= 1;
+                } else if (geo.type === 'pin') {
+                    const dist = Math.sqrt((wx - geo.x) ** 2 + (wy - geo.y) ** 2);
+                    isHit = dist < 20; // pin 点击半径 20
+                } else if (geo.type === 'polygon' && geo.points) {
+                    isHit = isPointInPoly(wx, wy, geo.points);
+                } else if (geo.type === 'polyline' && geo.points) {
+                    // 折线判断：距离最近线段 < 阈值
+                    for (let j = 1; j < geo.points.length; j++) {
+                        const dist = distToSegment(wx, wy, geo.points[j - 1].x, geo.points[j - 1].y, geo.points[j].x, geo.points[j].y);
+                        if (dist < 15) { isHit = true; break; }
+                    }
+                } else if (geo.type === 'circle' && geo.center) {
+                    const dist = Math.sqrt((wx - geo.center.x) ** 2 + (wy - geo.center.y) ** 2);
+                    isHit = dist <= (geo.radius || 100);
+                }
+                
+                if (isHit) {
+                    hit = geo; hitName = geo.name;
+                    const typeLabel = { polyline: '折线', polygon: '多边形', circle: '圆形', rect: '矩形', ellipse: '椭圆', pin: '标注点' }[geo.type] || geo.type;
+                    hitDetail = `${geo.presetType || '通用'} · ${typeLabel}`;
+                    if (geo.type === 'pin') hitDetail += ` (${geo.x}, ${geo.y})`;
+                    if (geo.type === 'ellipse') hitDetail += ` (${geo.cx}, ${geo.cy})`;
+                    if (geo.metrics?.lengthDesc) hitDetail += ` | ${geo.metrics.lengthDesc}`;
+                    if (geo.metrics?.areaDesc) hitDetail += ` | ${geo.metrics.areaDesc}`;
+                    break;
+                }
+            }
+            
+            // 2. 检测坐标点（如果没命中 geo）
+            if (!hit) {
+                for (let i = state.notes.length - 1; i >= 0; i--) {
+                    const note = state.notes[i];
+                    const dist = Math.sqrt((wx - note.x) ** 2 + (wy - note.y) ** 2);
+                    if (dist < 12) { // 圆点半径 8 + 缓冲
+                        hit = note; hitName = note.name;
+                        hitDetail = `坐标点 (${note.x}, ${note.y})`;
+                        if (note.content && note.content !== '无备注') hitDetail += ` | ${note.content}`;
+                        break;
+                    }
+                }
+            }
+            
+            // 3. 显示/隐藏弹窗
+            if (hit && hitName) {
+                nameEl.textContent = hitName;
+                detailEl.textContent = hitDetail;
+                popup.style.display = 'block';
+                // 弹窗位置：鼠标右上方
+                let px = screenX + 15;
+                let py = screenY - 40;
+                // 边界防止溢出
+                if (px + 220 > canvas.width) px = screenX - 230;
+                if (py < 0) py = screenY + 25;
+                popup.style.left = px + 'px';
+                popup.style.top = py + 'px';
+            } else {
+                popup.style.display = 'none';
+            }
+        }
+        
+        /** 计算点到线段的最短距离 */
+        function distToSegment(px, py, x1, y1, x2, y2) {
+            const dx = x2 - x1, dy = y2 - y1;
+            const len2 = dx * dx + dy * dy;
+            if (len2 === 0) return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
+            let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+            t = Math.max(0, Math.min(1, t));
+            return Math.sqrt((px - (x1 + t * dx)) ** 2 + (py - (y1 + t * dy)) ** 2);
         }
 

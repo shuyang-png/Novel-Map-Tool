@@ -168,6 +168,92 @@
         }
 
         /**
+         * 25a. 地理标识：平滑定位到地理标识
+         */
+        function panToGeo(geoId, duration = 300) {
+            const geo = state.geoMarkers.find(g => g.id === geoId);
+            if (!geo) return;
+            
+            // 计算地理标识中心点（不同类型）
+            let cx, cy;
+            if (geo.type === 'rect') {
+                cx = geo.x + geo.width / 2; cy = geo.y + geo.height / 2;
+            } else if (geo.type === 'ellipse') {
+                cx = geo.cx; cy = geo.cy;
+            } else if (geo.type === 'pin') {
+                cx = geo.x; cy = geo.y;
+            } else if (geo.type === 'circle' && geo.center) {
+                cx = geo.center.x; cy = geo.center.y;
+            } else if (geo.type === 'polygon' && geo.points?.length >= 3) {
+                cx = geo.points.reduce((s, p) => s + p.x, 0) / geo.points.length;
+                cy = geo.points.reduce((s, p) => s + p.y, 0) / geo.points.length;
+            } else if (geo.type === 'polyline' && geo.points?.length >= 2) {
+                cx = geo.points.reduce((s, p) => s + p.x, 0) / geo.points.length;
+                cy = geo.points.reduce((s, p) => s + p.y, 0) / geo.points.length;
+            } else return;
+
+            const targetOffsetX = canvas.width / 2 - cx;
+            const targetOffsetY = canvas.height / 2 - cy;
+            const startOffsetX = state.offsetX;
+            const startOffsetY = state.offsetY;
+            const startTime = performance.now();
+            const dx = targetOffsetX - startOffsetX;
+            const dy = targetOffsetY - startOffsetY;
+            if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+                state.offsetX = targetOffsetX; state.offsetY = targetOffsetY;
+                renderMap(); return;
+            }
+            function animatePan(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const t = 1 - (1 - progress) * (1 - progress);
+                state.offsetX = startOffsetX + dx * t;
+                state.offsetY = startOffsetY + dy * t;
+                renderMap();
+                if (progress < 1) requestAnimationFrame(animatePan);
+            }
+            requestAnimationFrame(animatePan);
+        }
+
+        /**
+         * 25b. 地理标识：查看地理标识详情
+         */
+        function showGeoBox(geoId) {
+            const geo = state.geoMarkers.find(g => g.id === geoId);
+            if (!geo) return;
+            
+            // 先平移
+            panToGeo(geoId);
+            
+            // 弹窗信息复用坐标点的 noteBox，填充 geo 信息
+            state.currentNoteId = geoId; state.isEditingNote = false;
+            noteNameDisplay.textContent = geo.name;
+            noteContentDisplay.textContent = _getGeoInfo(geo);
+            noteContentTextarea.value = '';
+            toggleNoteEditMode(false);
+            
+            setTimeout(() => {
+                // 居中计算
+                const containerRect = canvas.parentElement.getBoundingClientRect();
+                noteBox.style.left = `${(containerRect.width - 260) / 2}px`;
+                noteBox.style.top = `${(containerRect.height - 160) / 2}px`;
+                noteBox.style.display = 'block';
+            }, 320);
+        }
+        
+        function _getGeoInfo(geo) {
+            let info = `类型: ${geo.presetType || '通用'} | 形状: ${geo.type}`;
+            if (geo.type === 'rect') info += `\n位置: (${geo.x}, ${geo.y}) ${geo.width}×${geo.height}`;
+            if (geo.type === 'ellipse') info += `\n中心: (${geo.cx}, ${geo.cy}) rx=${geo.rx} ry=${geo.ry}`;
+            if (geo.type === 'pin') info += `\n坐标: (${geo.x}, ${geo.y})`;
+            if (geo.type === 'polyline' && geo.points) info += `\n顶点数: ${geo.points.length} 个`;
+            if (geo.type === 'polygon' && geo.points) info += `\n顶点数: ${geo.points.length} 个`;
+            if (geo.metrics?.areaDesc) info += `\n面积: ${geo.metrics.areaDesc}`;
+            if (geo.metrics?.lengthDesc) info += `\n长度: ${geo.metrics.lengthDesc}`;
+            return info;
+        }
+
+        /**
          * 24. 坐标点：查看坐标点详情
          */
         function showNoteBox(noteId) {
