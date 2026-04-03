@@ -429,13 +429,31 @@ class NovelMap {
     };
     this._data.mapRelations.push(rel);
     if (bidirectional) {
-      this._data.mapRelations.push({
-        id: baseId + '_reverse',
-        currentMapName: targetMapName,
-        currentXY: targetXY,
-        targetMapName: this._data.mapName,
-        targetXY: currentXY
-      });
+      // 在目标地图上添加反向关联
+      // 如果目标地图 JSON 已存在，加载它并写入反向关联；否则创建新文件
+      const targetPath = path.resolve(targetMapName + '.json');
+      let targetMap;
+      if (fs.existsSync(targetPath)) {
+        targetMap = NovelMap.loadMap(targetPath);
+      } else {
+        targetMap = new NovelMap(targetMapName, this._data.unit);
+        console.log(`📌 目标地图「${targetMapName}」不存在，自动创建空白地图`);
+      }
+      // 检查是否已存在相同反向关联
+      const existingReverse = targetMap._data.mapRelations.find(
+        r => r.currentMapName === this._data.mapName && r.currentXY === targetXY
+      );
+      if (!existingReverse) {
+        targetMap._data.mapRelations.push({
+          id: baseId + '_reverse',
+          currentMapName: targetMapName,
+          currentXY: targetXY,
+          targetMapName: this._data.mapName,
+          targetXY: currentXY
+        });
+        targetMap.saveMap(targetPath);
+        console.log(`✅ 已自动在「${targetMapName}」添加反向传送门`);
+      }
     }
     return rel;
   }
