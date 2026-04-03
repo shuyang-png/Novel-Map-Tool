@@ -133,6 +133,34 @@
 
 **完全离线可用**：HTML + JS 文件在本地即可运行，零外部依赖，不发起任何网络请求。地图数据以 JSON 文件保存在本地。
 
+## 在 Coze 上使用（AI 智能建图）
+
+本项目包含一个 **novel-map-api** Skill，用于 Agent（如 Coze）通过编程 API 生成地图 JSON，无需手写。
+
+### Skill 安装到 Coze
+
+1. **下载 skill 包**：从 GitHub 仓库的 `skill/` 目录获取 `novel-map-api.skill` 文件
+2. **在 Coze 平台上传**：Bot 配置 → 技能 → 安装技能 → 上传 `.skill` 文件
+3. **配置工作目录**：Agent 生成的地图 JSON 将保存在 `/root/.openclaw/workspace/Novel-Map-Tool/` 目录下
+4. **加载 HTML 渲查看**：用浏览器打开 `小说地图工具.html`，加载生成的 `.json` 文件即可查看/编辑
+
+### Coze 使用流程
+
+```
+用户: "创建一份玄幻小说地图"
+→ Agent 调用 novel-map-api 生成 世界地图
+→ 用户: "第2章，主角故乡被毁"
+→ Agent loadMap → searchGeo → editGeo → createVersion → saveMap
+```
+
+### Skill 约束说明
+
+novel-map-api 的 SKILL.md 包含以下关键约束，Agent 会自动遵守：
+- 坐标点不可重复（同一 (x,y) 只能有一个）
+- 实体建筑不重叠（除非作者要求）
+- 湖泊/海洋/王国默认圆形（ellipse）
+- 版本更新时必须先修改已有元素再调用 createVersion
+
 ### 文件加载模式
 
 | 场景 | Chrome/Edge | 其他浏览器 |
