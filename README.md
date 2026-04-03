@@ -68,27 +68,22 @@
 
 ### Skill 安装
 
-**方式一：直接安装打包好的 skill 文件（推荐）**
-
-```
-从仓库下载 skill/dist/novel-map-api.skill
-在你的 Agent 框架中上传 .skill 文件即可使用
-```
-
-**方式二：从源码安装（适合需要定制的开发者）**
-
 ```
 skill/
 ├── SKILL.md               ← Skill 说明文档（Agent 读取）
 ├── scripts/
-│   └── map-api.js         ← NovelMap API 实现
-├── references/
-│   └── presets.md         ← 26 种预设模板说明
-└── dist/
-    └── novel-map-api.skill ← 打包文件（含以上全部内容）
+│   └── map-api.js         ← NovelMap API 实现（Node.js）
+└── references/
+    └── presets.md         ← 26 种预设模板参数说明
 ```
 
-如需重新打包，将 SKILL.md、scripts/、references/ 放入同级目录，用 `zip` 打包为 `.skill` 文件。
+**使用方式：** 将 `skill/` 目录整个复制到你的 Agent 框架技能目录中，或让 Agent 直接读取 `SKILL.md` + `scripts/map-api.js`。
+
+`map-api.js` 是纯 Node.js 模块，可通过 `require` 调用：
+
+```javascript
+const { NovelMap, PRESETS } = require('./skill/scripts/map-api.js');
+```
 
 ### Agent 使用流程
 
