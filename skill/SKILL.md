@@ -145,34 +145,54 @@ map.addPolygon("王国", "苍澜国", { points: [[200,200],[800,200],[800,800],[
 
 ## 版本更新约束（重要）
 
-当用户说剧情发展/章节更新时，**不要只堆新标记，必须反映到已有元素上**。
+当用户说剧情发展/章节更新时，**不要只堆新标记，必须反映到已有元素上。**
 
-### 正确流程
+### ⚠️ 铁律：createVersion 必须在所有修改之后调用！
+
+`createVersion()` 在调用那一刻对比地图状态、计算 delta。**如果在修改之前调用，因为没有任何变化，返回 `null`，版本不会被创建。**
+
+### ❌ 错误示例（先 createVersion 后 edit）
+
+```javascript
+map.createVersion('第2章', '故乡被毁');    // ← 此时没任何修改！返回 null！
+map.editNote(note.id, { content: '被毁了' }); // ← 修改了，但版本已经丢了
+```
+
+### ✅ 正确示例（最后 createVersion）
+
+```javascript
+const map = NovelMap.loadMap("江湖.json");         // 1. 加载已有地图
+const note = map.listNotes().find(n => n.name.includes('故乡')); // 2. 找到受影响的元素
+map.editNote(note.id, { content: '故乡已被毁' });    // 3. 执行所有修改
+map.addGeo("废墟", "故乡遗址", { x: 400, y: 600, w: 100, h: 100 });
+const version = map.createVersion('第2章', '故乡被毁'); // 4. ← 最后调用！
+map.saveMap("江湖.json");                          // 5. 保存
+```
+
+### 版本更新流程（严格执行）
 
 ```
-1. loadMap("地图名.json")          // 先加载已有地图
-2. searchGeo("关键词")             // 查找受剧情影响的已有地理标识
-3. editGeo / deleteGeo             // 修改或删除受影响的元素
-4. addNote / addGeo                // 再添加新标记
-5. createVersion(chapter, label)    // 记录版本变化
-6. saveMap("地图名.json")           // 保存最终地图
+1. loadMap("地图名.json")                    → 加载已有地图
+2. searchGeo() / searchNote() / listNotes()  → 找到受影响的元素
+3. editGeo / deleteGeo / editNote / addNote  → 执行所有修改
+4. createVersion(chapter, label)              → ← 最后调用！所有修改完成后
+5. saveMap("地图名.json")                     → 保存最终地图
 ```
 
-### 关键：必须修改已有元素
+### 修改已有元素，不能只堆新标记
 
-| 情节 | 错误做法 | 正确做法 |
-|------|---------|---------|
-| 森林被毁 | 只堆新"战毁区"标记，原森林保留 | `editGeo` 缩小/改名，或 `deleteGeo` 删除原森林 |
-| 城池占领 | 添加新城池在旁边 | `editGeo` 修改所有者备注 |
+| 情节 | ❌ 错误 | ✅ 正确 |
+|------|--------|--------|
+| 故乡被毁 | 堆新"废墟"标记，原坐标不动 | `editNote` 修改内容 + `editGeo` 删除/修改原地点 |
+| 森林被焚 | 堆新焚毁区标记，原森林保留 | `editGeo` 缩小/改预设为废墟，或 `deleteGeo` 删除 |
+| 城池占领 | 堆新城池在旁边 | `editGeo` 修改备注/状态 |
 | 河流改道 | 新增一条河 | `editGeo` 修改原河流 points |
-| 宗门覆灭 | 加新的废墟标记 | `editGeo` 把宗门改为"废墟"预设 |
+| 宗门覆灭 | 加新废墟标记 | `editGeo` 把宗门改为"废墟"类型 |
 
-**原则：先找到已有元素，修改/删除它，再建新标记，最后 `createVersion`。`createVersion` 必须放在所有修改完成后调用，才能正确记录 delta。**
+### 版本更新检查清单（逐项打勾）
 
-### 版本更新检查清单
-
-1. [ ] 是否 `loadMap` 了已有地图？（不是从零开始）
-2. [ ] 是否 `searchGeo` / `searchNote` 找了受影响的元素？
-3. [ ] 是否 `editGeo` / `deleteGeo` 修改了受影响元素？
-4. [ ] 是否 `createVersion` 放在所有修改之后？
-5. [ ] 保存的文件名是否与原地图一致？（`saveMap("原名.json")`）
+1. [ ] `loadMap` 加载了已有地图（不是从零创建）
+2. [ ] `searchGeo` / `searchNote` / `listNotes` 找到了受影响的元素
+3. [ ] `editGeo` / `deleteGeo` / `editNote` 修改了受影响元素（不只是 add）
+4. [ ] **`createVersion` 放在所有 edit/add/delete 之后调用**
+5. [ ] `saveMap` 使用与原地图相同的文件名
