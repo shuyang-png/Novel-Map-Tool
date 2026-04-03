@@ -68,9 +68,27 @@
 
 ### Skill 安装
 
-1. 从 `skill/` 目录获取 `novel-map-api.skill` 文件
-2. 在你的 Agent 框架中安装 skill（上传 `.skill` 文件）
-3. 安装后 Agent 调用 NovelMap API 创建/编辑地图
+**方式一：直接安装打包好的 skill 文件（推荐）**
+
+```
+从仓库下载 skill/dist/novel-map-api.skill
+在你的 Agent 框架中上传 .skill 文件即可使用
+```
+
+**方式二：从源码安装（适合需要定制的开发者）**
+
+```
+skill/
+├── SKILL.md               ← Skill 说明文档（Agent 读取）
+├── scripts/
+│   └── map-api.js         ← NovelMap API 实现
+├── references/
+│   └── presets.md         ← 26 种预设模板说明
+└── dist/
+    └── novel-map-api.skill ← 打包文件（含以上全部内容）
+```
+
+如需重新打包，将 SKILL.md、scripts/、references/ 放入同级目录，用 `zip` 打包为 `.skill` 文件。
 
 ### Agent 使用流程
 
