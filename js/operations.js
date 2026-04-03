@@ -127,6 +127,44 @@
         }
 
         /**
+         * 24a. 坐标点：平滑定位到坐标点
+         */
+        function panToNote(noteId, duration = 300) {
+            const note = state.notes.find(n => n.id === noteId);
+            if (!note) return;
+            
+            const targetOffsetX = note.x - state.mapSize / 2;
+            const targetOffsetY = note.y - state.mapSize / 2;
+            const startOffsetX = state.offsetX;
+            const startOffsetY = state.offsetY;
+            const startTime = performance.now();
+            const dx = targetOffsetX - startOffsetX;
+            const dy = targetOffsetY - startOffsetY;
+            
+            // 如果偏移很小，直接跳转不动画
+            if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+                state.offsetX = targetOffsetX;
+                state.offsetY = targetOffsetY;
+                renderMap();
+                return;
+            }
+            
+            function animatePan(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // ease-out 缓动
+                const t = 1 - (1 - progress) * (1 - progress);
+                state.offsetX = startOffsetX + dx * t;
+                state.offsetY = startOffsetY + dy * t;
+                renderMap();
+                if (progress < 1) {
+                    requestAnimationFrame(animatePan);
+                }
+            }
+            requestAnimationFrame(animatePan);
+        }
+
+        /**
          * 24. 坐标点：查看坐标点详情
          */
         function showNoteBox(noteId) {
@@ -136,32 +174,38 @@
             state.currentNoteId = noteId;
             state.isEditingNote = false;
             
-            // 填充坐标点信息
-            noteNameDisplay.textContent = note.name;
-            noteContentDisplay.textContent = note.content;
-            noteContentTextarea.value = note.content;
-            state.originalNoteContent = note.content;
+            // 先平移地图到坐标点
+            panToNote(noteId);
             
-            // 计算备注框位置（noteBox在map-container内，用相对坐标）
-            const rect = canvas.getBoundingClientRect();
-            const containerRect = canvas.parentElement.getBoundingClientRect();
-            // note在canvas上的像素位置（相对canvas左上角）
-            const px = (note.x - state.offsetX) * state.scale + canvas.width / 2 - state.mapSize * state.scale / 2;
-            const py = (note.y - state.offsetY) * state.scale + canvas.height / 2 - state.mapSize * state.scale / 2;
-            // 转为相对map-container的坐标（canvas在container内有padding）
-            const cx = px + (rect.left - containerRect.left);
-            const cy = py + (rect.top - containerRect.top);
-            // 限制在container范围内
-            const boxW = 260, boxH = 160;
-            const cw = containerRect.width, ch = containerRect.height;
-            noteBox.style.left = `${Math.max(0, Math.min(cx + 20, cw - boxW))}px`;
-            noteBox.style.top = `${Math.max(0, Math.min(cy + 20, ch - boxH))}px`;
-            
-            // 切换到查看模式
-            toggleNoteEditMode(false);
-            
-            // 显示备注框
-            noteBox.style.display = 'block';
+            // 延迟显示备注框，等平移动画完成后计算正确位置
+            setTimeout(() => {
+                // 填充坐标点信息
+                noteNameDisplay.textContent = note.name;
+                noteContentDisplay.textContent = note.content;
+                noteContentTextarea.value = note.content;
+                state.originalNoteContent = note.content;
+                
+                // 计算备注框位置（noteBox在map-container内，用相对坐标）
+                const rect = canvas.getBoundingClientRect();
+                const containerRect = canvas.parentElement.getBoundingClientRect();
+                // note在canvas上的像素位置（相对canvas左上角）
+                const px = (note.x - state.offsetX) * state.scale + canvas.width / 2 - state.mapSize * state.scale / 2;
+                const py = (note.y - state.offsetY) * state.scale + canvas.height / 2 - state.mapSize * state.scale / 2;
+                // 转为相对map-container的坐标（canvas在container内有padding）
+                const cx = px + (rect.left - containerRect.left);
+                const cy = py + (rect.top - containerRect.top);
+                // 限制在container范围内
+                const boxW = 260, boxH = 160;
+                const cw = containerRect.width, ch = containerRect.height;
+                noteBox.style.left = `${Math.max(0, Math.min(cx + 20, cw - boxW))}px`;
+                noteBox.style.top = `${Math.max(0, Math.min(cy + 20, ch - boxH))}px`;
+                
+                // 切换到查看模式
+                toggleNoteEditMode(false);
+                
+                // 显示备注框
+                noteBox.style.display = 'block';
+            }, 320);
         }
 
         /**
