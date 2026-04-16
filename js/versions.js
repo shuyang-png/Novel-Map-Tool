@@ -10,13 +10,15 @@ function applyDelta(state, delta) {
     for (const group of ['notes', 'geoMarkers', 'mapRelations']) {
         const d = delta[group];
         if (!d) continue;
-        // add
+        
+        // 1. add - 先添加新增项
         if (d.add) {
             for (const item of d.add) {
                 state[group].push(structuredClone(item));
             }
         }
-        // update (patch by id)
+        
+        // 2. update - 更新现有项（包括已在 add 中的）
         if (d.update) {
             for (const patch of d.update) {
                 const target = state[group].find(e => e.id === patch.id);
@@ -27,9 +29,11 @@ function applyDelta(state, delta) {
                 }
             }
         }
-        // remove
+        
+        // 3. remove - 最后删除，会覆盖之前的 add/update
         if (d.remove && d.remove.length) {
-            state[group] = state[group].filter(e => !d.remove.includes(e.id));
+            const removeSet = new Set(d.remove);
+            state[group] = state[group].filter(e => !removeSet.has(e.id));
         }
     }
 }
